@@ -1,0 +1,888 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- Standard favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+  <link rel="shortcut icon" href="favicon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="favicon.png">
+  <meta name="msapplication-TileImage" content="favicon.png">
+
+  <meta name="google-site-verification" content="DDUilCrWn1kQduzzu9YyZkAd_XnpA-aPrHKeuartGRo" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>QR Code Generator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800&display=swap" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet"/>
+
+  <style>
+    :root{ --glass: rgba(255,255,255,0.06); --accent: #7b61ff; }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100vh;
+      font-family:'Poppins',system-ui,Segoe UI,Roboto,Arial;
+      background: linear-gradient(120deg,#FF8A00 0%, #FF3D81 30%, #7B61FF 60%, #00D2FF 100%);
+      display:block;
+      padding:20px;
+      color:#000;
+      overflow:auto;
+      scroll-behavior:smooth;
+    }
+
+    /* Container: grid; items stretch to equal height */
+    .container{
+      position:relative;
+      z-index:2;
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: clamp(10px, 2.5vw, 28px);
+      align-items: stretch;
+      max-width:1200px;
+      width:100%;
+      height:auto;
+      margin: 0.2mm auto 0;
+      padding: 0 16px;
+    }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+      backdrop-filter: blur(6px);
+      border-radius: clamp(10px, 1.6vw, 22px);
+      padding: clamp(12px, 2.2vw, 28px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+      overflow:hidden;
+      height:100%;
+      display:flex;
+      flex-direction:column;
+      justify-content:flex-start;
+    }
+
+    .card.left { min-width: 260px; }
+    @media (max-width:420px) { .card.left { min-width: auto; } }
+
+    .left h1, .left h2, .left h3, label {
+      font-size: clamp(0.85rem, 1.6vw, 1.15rem);
+    }
+
+    .controls { gap: clamp(8px, 1.8vw, 14px); }
+
+    .preview{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:flex-start;
+      padding: clamp(14px, 2.5vw, 30px);
+      min-height: 220px;
+    }
+
+    /* ---------- FIX: separate fixed frame from dynamic QR inner ---------- */
+    #qr-holder {
+      /* holder acts as positioning container only */
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      margin: 8px 0;
+      width: 100%;
+      /* don't let holder shrink the layout when QR changes */
+      min-height: 360px;
+    }
+
+    /* The visual "style" frame that should not change when slider changes.
+       Keep it consistent (rounded corners, background, padding). */
+    .qr-frame{
+      width: clamp(200px, 42vw, 360px); /* visual frame size - responsive but stable */
+      height: clamp(200px, 42vw, 360px);
+      max-width: 360px;
+      max-height: 360px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background: rgba(255,255,255,0.12);
+      border-radius: clamp(12px, 1.2vw, 20px);
+      padding: 12px;
+      box-shadow: 0 8px 18px rgba(0,0,0,0.12);
+      transition: box-shadow 180ms ease;
+      flex: 0 0 auto;
+    }
+
+    /* Inner container that will change size (the actual QR sits inside this).
+       We will set .qr-inner width/height inline from JS to match the slider. */
+    .qr-inner{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background: transparent;
+      border-radius: 10px; /* small rounding only on the inner element */
+      flex: 0 0 auto;
+    }
+
+    /* ensure QR canvas/svg/image fits the .qr-inner exactly but does not stretch the outer frame */
+    .qr-inner canvas, .qr-inner svg, .qr-inner img {
+      display:block;
+      width:100% !important;
+      height:100% !important;
+      object-fit:contain;
+      border-radius: 6px;
+    }
+
+    .meta {
+      margin-top: 12px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      align-items:center;
+      font-size:13px;
+      color:#000;
+      text-shadow:0 0 6px rgba(0,0,0,0.3);
+      flex: 0 0 auto;
+    }
+
+    input[type=range], input[type=color], select, textarea, input[type=text] {
+      font-size: clamp(0.85rem, 1.4vw, 1rem);
+      padding: clamp(6px, 1.2vw, 10px);
+    }
+
+    @media (max-width:420px){
+      body { padding:12px; }
+      .container { margin-top:0.2mm; gap:10px; }
+      .topbar h2 { font-size: 0.95rem; }
+      .menu-btn { font-size: 18px; }
+      /* make the frame a bit smaller on tiny screens */
+      .qr-frame { width: clamp(160px, 46vw, 320px); height: clamp(160px, 46vw, 320px); }
+      #qr-holder { min-height: 300px; }
+    }
+
+    @media (min-width:1400px){
+      .container { max-width:1400px; gap:36px; }
+      .card { padding: clamp(20px, 1.6vw, 36px); }
+    }
+
+    .controls{display:grid;gap:10px;margin-bottom:10px}
+    .field{background:var(--glass);padding:10px;border-radius:12px}
+    label{display:block;font-size:12px;margin-bottom:6px;opacity:0.9;color:#000;text-shadow:0 0 6px rgba(0,0,0,0.3) }
+
+    input[type=text], select, textarea{
+      width:100%;padding:8px;border-radius:8px;border:0;
+      background:rgba(255,255,255,0.15);color:#000;font-size:13px;outline:none;
+      transition:all 0.3s ease;text-shadow:0 0 6px rgba(0,0,0,0.2)
+    }
+    textarea{min-height:60px;resize:none}
+    .row{display:flex;gap:10px}
+
+    .btn{
+      background:linear-gradient(90deg,#ff8a00,#ff3d81,#7b61ff,#00d2ff);
+      border:0;padding:10px 16px;border-radius:12px;
+      color:#000;font-weight:600;cursor:pointer;font-size:13px;
+      transition:0.3s;text-shadow:0 0 6px rgba(0,0,0,0.3)
+    }
+    .btn:hover{opacity:0.85}
+    .btn:active{animation:pulse 0.3s ease}
+
+    .color-input{height:28px;width:40px;border-radius:6px;border:0;padding:0;Transition:all 0.3s ease}
+    .range{display:flex;align-items:center;gap:8px}
+    input[type=range]{width:100%;transition:all 0.3s ease}
+
+    select:hover, input[type=color]:hover, input[type=range]:hover, textarea:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 10px rgba(0,0,0,0.4);
+    }
+    input[type=range]::-webkit-slider-thumb {transition: all 0.3s ease;}
+    input[type=range]:active::-webkit-slider-thumb {
+      transform: scale(1.2);
+      box-shadow: 0 0 10px #000;
+    }
+    input[type=color]:active {transform: rotate(10deg) scale(1.1);}
+    @keyframes pulse {0%{transform:scale(1);}50%{transform:scale(0.9);}100%{transform:scale(1);} }
+
+    @media (max-width:900px){
+      body{display:block;overflow:auto;}
+      .preview{order:-1}
+      .left h1, .left p { display:none; }
+    }
+
+    .topbar {
+      position:fixed; top:0; left:0; right:0; height:50px;
+      background:rgba(255,255,255,0.4); backdrop-filter:blur(8px);
+      color:#fff; display:flex; align-items:center; justify-content:space-between;
+      padding:0 16px; z-index:10000;
+    }
+    .menu-btn { background:none; border:none; color:#fff; font-size:20px; cursor:pointer;}
+    .side-menu {
+      position:fixed; top:0; left:0;
+      width:220px; height:100%;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      align-items:stretch;
+      background:rgba(255,255,255,0.24); backdrop-filter:blur(10px);
+      padding:18px;
+      transform:translateX(-260px);
+      transition:transform 280ms cubic-bezier(.2,.9,.2,1);
+      z-index:9999;
+    }
+    .side-menu.show { transform:translateX(0); }
+    .side-menu a {
+      display:block; width:100%; color:#fff; text-decoration:none; margin:8px 0;
+      padding:12px 14px; border-radius:10px; font-weight:600; background:transparent; box-sizing:border-box;
+    }
+    .side-menu a:hover { background: rgba(255, 255, 255, 0.185); }
+
+    .info-section {
+      max-width:1000px;
+      margin:32px auto 120px;
+      padding:22px;
+      border-radius:12px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+      backdrop-filter: blur(6px);
+      color:#000;
+      position: relative;
+      min-height: 150px;
+      overflow: visible;
+    }
+
+    .info-section > .info-item {
+      display:none;
+      position:absolute;
+      inset:0;
+      padding:10px 6px;
+      opacity:0;
+      pointer-events:none;
+      transform: translateY(10px);
+      will-change: transform, opacity;
+    }
+
+    .info-section > .info-item.active {
+      display:block;
+      opacity:1;
+      pointer-events:auto;
+      transform: translateY(0);
+    }
+
+    @keyframes enterFromBottom {
+      0% { transform: translateY(30px); opacity:0; }
+      100% { transform: translateY(0); opacity:1; }
+    }
+    .anim-enter-bottom {
+      display:block;
+      animation: enterFromBottom 420ms cubic-bezier(.22,.9,.3,1) forwards;
+      pointer-events:auto;
+      z-index: 50;
+    }
+
+    @keyframes exitToRight {
+      0% { transform: translateX(0); opacity:1; }
+      100% { transform: translateX(40px); opacity:0; }
+    }
+    .anim-exit-right {
+      display:block;
+      animation: exitToRight 320ms cubic-bezier(.2,.6,.4,1) forwards;
+      pointer-events:none;
+      z-index: 10;
+    }
+
+    #cropperModal { position: fixed; top:0; left:0; width:100%; height:100%; display:none; align-items:center; justify-content:center; z-index:99999; gap:0; }
+    #cropperModal.show { display:flex; pointer-events:auto; }
+    #cropperModal .backdrop { position:absolute; inset:0; background:rgba(0,0,0,0.6); opacity:0; transform:scale(.998); transition:all 160ms ease; pointer-events:auto; }
+    #cropperModal.show .backdrop { opacity:1; transform:scale(1); }
+    #cropperBox { position:relative; background:#fff; padding:12px; border-radius:12px; max-width:92%; max-height:92%; display:flex; flex-direction:column; align-items:center; z-index:2; transform:translateY(6px) scale(.99); opacity:0; transition:all 180ms cubic-bezier(.2,.9,.2,1); box-shadow:0 20px 60px rgba(0,0,0,0.4); overflow:auto; pointer-events:auto; }
+    #cropperModal.show #cropperBox { transform:translateY(0) scale(1); opacity:1; }
+    #cropperImage { max-width:100%; max-height:65vh; display:block; border-radius:8px; }
+    .modal-buttons { margin-top:10px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+
+    [id] { scroll-margin-top:0.2mm; }
+  </style>
+</head>
+<body>
+  <!-- Top Bar -->
+  <div class="topbar">
+    <button class="menu-btn" onclick="toggleMenu()" aria-expanded="false" aria-controls="sideMenu">☰ Menu</button>
+    <h2>QR Code Generator Seven Deab</h2>
+  </div>
+
+  <!-- Side Menu -->
+  <nav id="sideMenu" class="side-menu" aria-hidden="true" role="navigation">
+    <div class="spacer"></div>
+    <a href="#home" data-target="home">Home</a>
+    <a href="#about" data-target="about">About</a>
+    <a href="#how" data-target="how">How it Works</a>
+    <a href="#privacy" data-target="privacy">Privacy Policy</a>
+    <a href="#contact" data-target="contact">Contacts</a>
+  </nav>
+
+  <!-- Main QR Generator -->
+  <main id="home" class="container" role="main" aria-label="QR generator main area">
+    <!-- Left Side -->
+    <div class="card left">
+      <div class="controls">
+        <div class="field">
+          <label for="type"><h3>Type</h3></label>
+          <select id="type">
+            <option value="text">Plain Text</option>
+            <option value="url">URL</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field" id="content-field">
+        <label id="content-label"></label>
+        <textarea id="content" placeholder="Paste your text..."></textarea>
+      </div>
+
+      <div class="row">
+        <div style="flex:1" class="field">
+          <label><h3>Logo / Center Image (optional)</h3></label>
+          <input id="logo-file" type="file" accept="image/*" />
+        </div>
+        <div style="width:200px" class="field">
+          <label>Size (Max 320px)</label>
+          <div class="range">
+            <!-- MAX set to 320 per your request -->
+            <input id="sizeRange" type="range" min="128" max="320" value="320">
+            <div style="width:50px;text-align:right" id="sizeVal">320px</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field" style="flex:1">
+          <label>Foreground Color</label>
+          <input id="fg" class="color-input" type="color" value="#000000">
+        </div>
+        <div class="field" style="flex:1">
+          <label>Background Color</label>
+          <input id="bg" class="color-input" type="color" value="#ffffff">
+        </div>
+      </div>
+
+      <div style="margin-top:12px">
+        <button id="downloadPNG" class="btn">Download PNG</button>
+        
+      </div>
+    </div>
+
+    <!-- Right Side -->
+    <div class="card preview">
+      <div id="qr-holder" aria-live="polite"></div>
+      <div class="meta">
+        <div>Size <strong id="previewSize">320</strong>px</div>
+        <div>
+          <label for="effect"><h3>QR Style</h3></label>
+          <select id="effect">
+            <option value="extra-rounded">Extra Rounded</option>
+            <option value="dots">Dots</option>
+            <option value="rounded">Rounded</option>
+            <option value="classy">Classy</option>
+            <option value="classy-rounded">Classy Rounded</option>
+            <option value="square">Square</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ONE info section BELOW the main area -->
+  <section id="info" class="info-section" aria-live="polite">
+    <div id="about" class="info-item">
+      <h2>About</h2>
+      <p>
+        Welcome to the QR Code Generator. This little tool helps you make clear QR codes fast — no sign-up and no hard settings. You can create a QR from plain text or a link, change size, colors, style, and put a small logo in the middle. It is built to be simple and friendly so anyone can use it.
+      </p>
+    </div>
+
+    <div id="how" class="info-item">
+      <h2>How it Works</h2>
+      <p>Follow these easy steps:</p>
+      <ul>
+        <li><strong>Choose Type:</strong> pick "Plain Text" or "URL".</li>
+        <li><strong>Paste Content:</strong> put your text or link into the content box.</li>
+        <li><strong>Customize:</strong> change size, foreground/background color, and the QR style. Optionally add a center logo.</li>
+        <li><strong>Preview:</strong> the QR updates live on the right so you can check it instantly.</li>
+        <li><strong>Download:</strong> press "Download PNG" to save the image to your device.</li>
+      </ul>
+    </div>
+
+    <div id="privacy" class="info-item">
+      <h2>Privacy Policy</h2>
+      <p>
+        It's short and simple: This tool runs in your browser. Your text and any image you upload are processed locally on your device and are not sent to a remote server by this page. We do not collect or store your QR content.
+      </p>
+      <p>
+       <p>
+  Our website uses Google AdSense, a service for including advertisements. 
+  Google, as a third-party vendor, uses cookies to serve ads based on your prior visits to this site and other sites on the Internet. 
+  Users may learn more about how Google uses data by visiting 
+  <a href="https://policies.google.com/technologies/ads" target="_blank" rel="noopener noreferrer">
+    Google Advertising Policies
+  </a>.
+</p>
+
+        
+      </p>
+      <p>
+       
+      </p>
+    </div>
+
+    <div id="contact" class="info-item">
+      <h2>Contact</h2>
+      <p>
+        Need help, or want some changes on the website? Use the Email below.
+      </p>
+      <ul>
+        <li><strong>Email:</strong> <a href="https://mail.google.com/mail/?view=cm&fs=1&to=qr.code.generator.seven.drab@gmail.com" target="_blank" rel="noopener noreferrer">qr.code.generator.seven.drab@gmail.com</a></li>
+     </ul>
+      <p>
+        
+      </p>
+    </div>
+  </section>
+
+  <!-- Note: cropper modal is created dynamically -->
+
+  <!-- libs -->
+  <script src="https://cdn.jsdelivr.net/npm/qr-code-styling@1.5.0/lib/qr-code-styling.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+
+  <script>
+    /* -------------------------
+       Menu behavior & Animated Info
+       ------------------------- */
+    const sideMenu = document.getElementById('sideMenu');
+    const menuBtn = document.querySelector('.menu-btn');
+    function toggleMenu(){
+      const showing = sideMenu.classList.toggle('show');
+      sideMenu.setAttribute('aria-hidden', !showing);
+      menuBtn.setAttribute('aria-expanded', showing);
+    }
+
+    document.addEventListener('click', (e) => {
+      const menu = sideMenu;
+      const button = menuBtn;
+      if (!menu.contains(e.target) && !button.contains(e.target)) {
+        menu.classList.remove('show');
+        menu.setAttribute('aria-hidden', 'true');
+        menuBtn.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    const infoItems = document.querySelectorAll('.info-item');
+    const menuLinks = Array.from(document.querySelectorAll('.side-menu a'));
+
+    function hideAllInfoInstant(){
+      infoItems.forEach(i=>{
+        i.classList.remove('active','anim-enter-bottom','anim-exit-right');
+        i.style.display = 'none';
+        i.style.zIndex = '';
+      });
+    }
+
+    function setActiveMenu(href){
+      menuLinks.forEach(l=> l.classList.toggle('active', (l.getAttribute('href') === href || (l.getAttribute('href')==='index.html' && href==='#home'))));
+    }
+
+    function showInfoAnimated(targetId){
+      const target = document.getElementById(targetId);
+      const current = document.querySelector('.info-item.active');
+      if (!target) return;
+      if (current === target) return;
+
+      target.classList.remove('anim-enter-bottom','anim-exit-right','active');
+      target.style.display = 'block';
+      requestAnimationFrame(()=> {
+        target.classList.add('anim-enter-bottom');
+        target.style.zIndex = 50;
+      });
+
+      if (current) {
+        current.classList.remove('anim-enter-bottom','anim-exit-right','active');
+        requestAnimationFrame(()=> {
+          current.classList.add('anim-exit-right');
+          current.style.zIndex = 10;
+        });
+      }
+
+      const onEnterEnd = (e) => {
+        target.classList.remove('anim-enter-bottom');
+        target.classList.add('active');
+        target.style.zIndex = '';
+        target.removeEventListener('animationend', onEnterEnd);
+      };
+      target.addEventListener('animationend', onEnterEnd);
+
+      if (current) {
+        const onExitEnd = (e) => {
+          current.classList.remove('anim-exit-right','active');
+          current.style.display = 'none';
+          current.style.zIndex = '';
+          current.removeEventListener('animationend', onExitEnd);
+        };
+        current.addEventListener('animationend', onExitEnd);
+      }
+    }
+
+    menuLinks.forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const href = link.getAttribute('href');
+
+        sideMenu.classList.remove('show');
+        sideMenu.setAttribute('aria-hidden', 'true');
+        menuBtn.setAttribute('aria-expanded', 'false');
+
+        if (href === '#home' || href === 'index.html') {
+          hideAllInfoInstant();
+          setActiveMenu(href);
+          document.getElementById('home').scrollIntoView({behavior:'smooth', block:'start'});
+          return;
+        }
+
+        const targetId = href.replace('#','');
+        setActiveMenu(href);
+        showInfoAnimated(targetId);
+        document.getElementById('info').scrollIntoView({behavior:'smooth', block:'start'});
+      });
+    });
+
+    function updateActiveOnScroll(){
+      const top = window.pageYOffset;
+      const infoTop = document.getElementById('info').offsetTop;
+      if (top + 140 < infoTop) {
+        setActiveMenu('#home');
+      } else {
+        let chosen = null;
+        infoItems.forEach(item => {
+          const rect = item.getBoundingClientRect();
+          if (rect.top < window.innerHeight/2 && rect.bottom > 120) chosen = item;
+        });
+        if (chosen) {
+          setActiveMenu('#' + chosen.id);
+        } else {
+          setActiveMenu('#about');
+        }
+      }
+    }
+    window.addEventListener('scroll', updateActiveOnScroll);
+    window.addEventListener('load', ()=>{ hideAllInfoInstant(); setActiveMenu('#home'); equalizeCardHeights(); createQR(); updateActiveOnScroll(); });
+
+    /* -------------------------
+       Cropper modal (dynamic)
+       ------------------------- */
+    const logoFile = document.getElementById('logo-file');
+    let logoDataUrl = null;
+
+    function createCropperModalElements() {
+      const modal = document.createElement('div');
+      modal.id = 'cropperModal';
+      modal.className = 'show';
+      modal.setAttribute('aria-hidden', 'false');
+
+      const backdrop = document.createElement('div');
+      backdrop.className = 'backdrop';
+      backdrop.tabIndex = -1;
+
+      const box = document.createElement('div');
+      box.id = 'cropperBox';
+      box.setAttribute('role', 'dialog');
+      box.setAttribute('aria-modal', 'true');
+      box.setAttribute('aria-label', 'Crop logo');
+
+      const img = document.createElement('img');
+      img.id = 'cropperImage';
+      img.alt = 'Logo to crop';
+      img.style.maxWidth = '100%';
+      img.style.display = 'block';
+
+      const btns = document.createElement('div');
+      btns.className = 'modal-buttons';
+
+      const cropBtn = document.createElement('button');
+      cropBtn.id = 'cropCircle';
+      cropBtn.className = 'btn';
+      cropBtn.type = 'button';
+      cropBtn.textContent = 'Crop as Circle';
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.id = 'cropCancel';
+      cancelBtn.className = 'btn';
+      cancelBtn.type = 'button';
+      cancelBtn.textContent = 'Cancel';
+
+      btns.appendChild(cropBtn);
+      btns.appendChild(cancelBtn);
+
+      box.appendChild(img);
+      box.appendChild(btns);
+
+      modal.appendChild(backdrop);
+      modal.appendChild(box);
+
+      return { modal, backdrop, box, img, cropBtn, cancelBtn };
+    }
+
+    function removeModal(modal, cropperInstance, listeners) {
+      try { if (cropperInstance) { cropperInstance.destroy(); cropperInstance = null; } } catch(e){}
+      try {
+        if (listeners && listeners.backdrop) modal.querySelector('.backdrop').removeEventListener('click', listeners.backdrop);
+        if (listeners && listeners.cancel) modal.querySelector('#cropCancel').removeEventListener('click', listeners.cancel);
+        if (listeners && listeners.crop) modal.querySelector('#cropCircle').removeEventListener('click', listeners.crop);
+      } catch(e){}
+      if (listeners && listeners.keydown) document.removeEventListener('keydown', listeners.keydown);
+
+      if (modal && modal.parentNode) modal.parentNode.removeChild(modal);
+      logoFile.value = '';
+      try { logoFile.focus(); } catch(e){}
+    }
+
+    logoFile.addEventListener('change', (e) => {
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+
+      if (!f.type || !f.type.startsWith('image/')) {
+        alert('Please choose an image file (jpg, png, jpeg, gif). You selected: ' + (f.name || 'unknown'));
+        logoFile.value = '';
+        return;
+      }
+
+      const { modal, backdrop, box, img, cropBtn, cancelBtn } = createCropperModalElements();
+      document.body.appendChild(modal);
+
+      let cropperInstance = null;
+      let listeners = {};
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        img.src = reader.result;
+
+        const initCropper = () => {
+          if (typeof Cropper !== 'function') {
+            console.error('Cropper library is not loaded.');
+            alert('Cropper library failed to load. Try reloading the page.');
+            removeModal(modal, null, listeners);
+            return;
+          }
+
+          requestAnimationFrame(() => {
+            setTimeout(() => {
+              try {
+                if (cropperInstance) { cropperInstance.destroy(); cropperInstance = null; }
+                cropperInstance = new Cropper(img, {
+                  aspectRatio: 1,
+                  viewMode: 2,
+                  autoCropArea: 1,
+                  background: false,
+                  responsive: true,
+                  modal: true
+                });
+                cropBtn.focus();
+              } catch (err) {
+                console.error('Cropper init error', err);
+                alert('Failed to initialize cropper. See console for details.');
+                removeModal(modal, cropperInstance, listeners);
+              }
+            }, 60);
+          });
+        };
+
+        if ('decode' in img) {
+          img.decode().then(initCropper).catch(initCropper);
+        } else {
+          img.onload = initCropper;
+        }
+      };
+      reader.readAsDataURL(f);
+
+      listeners.backdrop = () => {
+        removeModal(modal, cropperInstance, listeners);
+        logoDataUrl = null;
+        createQR();
+      };
+      backdrop.addEventListener('click', listeners.backdrop);
+
+      listeners.cancel = () => {
+        removeModal(modal, cropperInstance, listeners);
+        logoDataUrl = null;
+        createQR();
+      };
+      cancelBtn.addEventListener('click', listeners.cancel);
+
+      listeners.keydown = (ev) => {
+        if (ev.key === 'Escape') {
+          removeModal(modal, cropperInstance, listeners);
+          logoDataUrl = null;
+          createQR();
+        }
+      };
+      document.addEventListener('keydown', listeners.keydown);
+
+      listeners.crop = () => {
+        if (!cropperInstance) return;
+        try {
+          const canvas = cropperInstance.getCroppedCanvas({ width: 800, height: 800, imageSmoothingEnabled: true, imageSmoothingQuality: 'high' });
+          const size = Math.min(canvas.width, canvas.height);
+          const circleCanvas = document.createElement('canvas');
+          circleCanvas.width = size;
+          circleCanvas.height = size;
+          const ctx = circleCanvas.getContext('2d');
+          ctx.beginPath();
+          ctx.arc(size/2, size/2, size/2, 0, 2*Math.PI);
+          ctx.closePath();
+          ctx.clip();
+          ctx.drawImage(canvas, 0, 0, size, size);
+          logoDataUrl = circleCanvas.toDataURL('image/png');
+        } catch (err) {
+          console.error('Crop error', err);
+          alert('Failed to crop image. See console for details.');
+          logoDataUrl = null;
+        } finally {
+          removeModal(modal, cropperInstance, listeners);
+          createQR();
+        }
+      };
+      cropBtn.addEventListener('click', listeners.crop);
+    });
+
+    /* -------------------------
+       QR code logic (exact feature from your OLD working file)
+       ------------------------- */
+    const typeEl=document.getElementById('type');
+    const contentField=document.getElementById('content-field');
+    let contentEl=document.getElementById('content');
+    const fgEl=document.getElementById('fg');
+    const bgEl=document.getElementById('bg');
+    const sizeRange=document.getElementById('sizeRange');
+    const sizeVal=document.getElementById('sizeVal');
+    const previewSize=document.getElementById('previewSize');
+    const downloadPNG=document.getElementById('downloadPNG');
+    const effectEl=document.getElementById('effect');
+    let qrCode=null;
+
+    function updateContentField(){
+      contentField.innerHTML = '<label>Content</label>' + 
+        (typeEl.value==="url" ? '<textarea id="content" placeholder="Paste your URL..."></textarea>' : '<textarea id="content" placeholder="Paste your text..."></textarea>');
+      contentEl=document.getElementById('content');
+      contentEl.addEventListener('input',()=>createQR());
+    }
+
+    /* -------------------------
+       UPDATED createQR: place QR inside .qr-inner which we size to slider.
+       .qr-frame remains stable (the QR visual style), only .qr-inner (the code) changes.
+       ------------------------- */
+    function createQR(){
+      if (!contentEl) updateContentField();
+      const data = (contentEl && contentEl.value) ? contentEl.value.trim() : '';
+      const size = parseInt(sizeRange.value, 10) || 320;
+      const holder = document.getElementById('qr-holder');
+      holder.innerHTML = '';
+
+      // create the stable visual frame
+      const frame = document.createElement('div');
+      frame.className = 'qr-frame';
+
+      // create the inner element that will receive the QR canvas and resize
+      const inner = document.createElement('div');
+      inner.className = 'qr-inner';
+      // set the inner size to exactly the slider value (this is the only thing that changes)
+      inner.style.width = size + 'px';
+      inner.style.height = size + 'px';
+
+      frame.appendChild(inner);
+      holder.appendChild(frame);
+
+      // If no data, show placeholder inside the inner (so frame remains same)
+      if(!data){
+        const placeholder = document.createElement('div');
+        placeholder.style.width = '100%';
+        placeholder.style.height = '100%';
+        placeholder.style.display = 'flex';
+        placeholder.style.alignItems = 'center';
+        placeholder.style.justifyContent = 'center';
+        placeholder.style.background = 'rgba(255,255,255,0.04)';
+        placeholder.style.border = '2px dashed rgba(0,0,0,0.15)';
+        placeholder.style.borderRadius = '8px';
+        placeholder.style.color = '#000';
+        placeholder.style.fontSize = '14px';
+        placeholder.style.textAlign = 'center';
+        placeholder.textContent = 'Your QR code will appear here';
+        inner.appendChild(placeholder);
+
+        previewSize.textContent = size;
+        sizeVal.textContent = size + 'px';
+        return;
+      }
+
+      const options = {
+        width: size,
+        height: size,
+        data: data,
+        image: logoDataUrl || undefined,
+        dotsOptions: { color: fgEl.value, type: effectEl.value },
+        backgroundOptions: { color: bgEl.value },
+        imageOptions: {
+          crossOrigin: 'anonymous',
+          margin: 2,
+          imageSize: 0.25,
+          hideBackgroundDots: true,
+          borderRadius: 9999
+        },
+        qrOptions: { errorCorrectionLevel: "H" },
+        margin: 4
+      };
+
+      if(qrCode){ try { qrCode.clear(); } catch(e){} }
+      qrCode = new QRCodeStyling(options);
+      // append to inner (not to holder/frame) so only the QR itself grows/shrinks
+      qrCode.append(inner);
+
+      previewSize.textContent = size;
+      sizeVal.textContent = size + 'px';
+    }
+
+    // init
+    updateContentField();
+    createQR();
+
+    // listeners
+    typeEl.addEventListener('change', ()=>{ updateContentField(); createQR(); });
+    sizeRange.addEventListener('input', ()=>{ sizeVal.textContent = sizeRange.value + 'px'; previewSize.textContent = sizeRange.value; createQR(); });
+    [fgEl, bgEl, effectEl].forEach(el => el.addEventListener('change', ()=> createQR()));
+
+    // download
+    downloadPNG.addEventListener('click', async ()=>{
+      if(!qrCode) return;
+      try {
+        const blob = await qrCode.getRawData('png');
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download='qr.png';
+        document.body.appendChild(a); a.click(); a.remove();
+        URL.revokeObjectURL(url);
+      } catch (err) { console.error('Download error', err); }
+    });
+
+    /* -------------------------
+       small utility to equalize heights (kept from latest code)
+       ------------------------- */
+    function equalizeCardHeights(){
+      const left = document.querySelector('.card.left');
+      const right = document.querySelector('.card.preview');
+      if (!left || !right) return;
+      left.style.height = '';
+      right.style.height = '';
+      const max = Math.max(left.offsetHeight, right.offsetHeight);
+      left.style.height = right.style.height = max + 'px';
+    }
+
+    // keep equal heights on resize
+    let resizeTimer = null;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(()=>{
+        equalizeCardHeights();
+        createQR();
+      }, 120);
+    });
+  </script>
+</body>
+</html>
+
+
