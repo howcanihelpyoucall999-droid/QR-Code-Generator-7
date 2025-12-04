@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ZagAI — Chat demo</title>
+  <link rel="stylesheet" href="Zagstyle.css">
+</head>
+<body>
+  <main class="app" role="application" aria-label="ZagAI chat application">
+    <header class="topbar" role="banner">
+      <div class="logo" aria-hidden="true">Z</div>
+      <div class="title">ZagAI</div>
+    </header>
+
+    <section id="chat-area" class="chat-area" aria-live="polite" aria-atomic="false">
+      <div id="chat-messages" class="chat-messages" role="log" aria-live="polite"></div>
+
+      <div id="emptyChatPlaceholder" class="empty-placeholder" aria-hidden="false">
+        Talk with <span class="zag">ZagAI</span>
+      </div>
+    </section>
+
+    <form id="chat-form" class="chat-input-area" action="#" onsubmit="return false;" aria-label="Message input area">
+      <textarea id="chatMessageInput" aria-label="Type a message" placeholder="Type a message..." rows="1"></textarea>
+      <button id="sendChatMessageBtn" class="send-btn" type="button" aria-label="Send message">Send</button>
+    </form>
+  </main>
+
+  <script src="Zaglogic.js" defer></script>
+</body>
+</html>
