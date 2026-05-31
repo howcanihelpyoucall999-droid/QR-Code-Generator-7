@@ -228,7 +228,10 @@
             content: "";
             position: absolute;
             inset: 0;
-            background: linear-gradient(to right, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.25) 35%, rgba(0,0,0,0) 60%);
+            /* Strong dark gradient from left + bottom, like the reference */
+            background:
+                linear-gradient(to right,  rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.50) 45%, rgba(0,0,0,0.05) 70%),
+                linear-gradient(to top,    rgba(0,0,0,0.60) 0%, rgba(0,0,0,0.10) 45%, rgba(0,0,0,0) 70%);
             z-index: 1;
             pointer-events: none;
         }
@@ -242,13 +245,13 @@
             animation: none;
             transform: scale(1.02);
         }
-        /* Overlay text: pinned to top-left corner */
+        /* Overlay text: pinned to bottom-left like the reference */
         .robot-overlay-text {
             position: absolute;
-            top: 0;
+            bottom: 0;
             left: 0;
             z-index: 2;
-            padding: clamp(18px, 3.5%, 36px);
+            padding: clamp(20px, 4%, 42px);
             display: flex;
             flex-direction: column;
             align-items: flex-start;
@@ -258,23 +261,24 @@
             font-size: 0.9rem;
         }
         .robot-overlay-text h1 {
-            font-size: clamp(2rem, 5.5vw, 4rem);
+            font-size: clamp(2.2rem, 6vw, 4.2rem);
             font-weight: 800;
             line-height: 1;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
         }
         .robot-overlay-text h1 span { color: var(--electric-blue); }
         .robot-overlay-text .description {
-            margin: 0 0 16px 0;
+            margin: 0 0 20px 0;
             text-align: left;
-            max-width: 300px;
-            font-size: 0.9rem;
+            max-width: 320px;
+            font-size: 0.95rem;
+            line-height: 1.5;
         }
         .robot-overlay-text .demo-btn-9 {
-            padding: 8px 16px;
-            font-size: 11px;
-            gap: 7px;
-            letter-spacing: 0.8px;
+            padding: 14px 28px;
+            font-size: 13px;
+            gap: 10px;
+            letter-spacing: 1px;
         }
 
         @keyframes floating {
