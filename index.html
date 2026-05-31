@@ -124,19 +124,27 @@
         }
 
         /* 4, 9: MIDDLE SECTION */
-        .middle-layout {
-            display: grid;
-            grid-template-columns: 1.2fr 1fr;
+                .middle-layout {
+            display: flex;
+            flex-direction: column;
             align-items: center;
+            gap: 24px;
             flex-grow: 1;
+            width: 100%;
+            max-width: 1120px;
+            margin: 0 auto;
         }
 
-        .text-area { z-index: 2; }
-        .text-area h1 { font-size: clamp(3.5rem, 8vw, 6rem); font-weight: 800; margin-bottom: 5px; }
+        .text-area {
+            z-index: 2;
+            text-align: center;
+            width: 100%;
+        }
+        .text-area h1 { font-size: clamp(3.4rem, 8vw, 6rem); font-weight: 800; margin-bottom: 5px; }
         .text-area h1 span { color: var(--electric-blue); } /* Blue "Dops" */
-        
+
         .maker-label { color: var(--text-dim); font-size: 1.1rem; display: block; margin-bottom: 15px; }
-        .description { color: var(--text-dim); max-width: 380px; margin-bottom: 25px; font-weight: 300; }
+        .description { color: var(--text-dim); max-width: 620px; margin: 0 auto 25px; font-weight: 300; }
 
         .demo-btn-9 { /* Section 9 */
             display: inline-flex; align-items: center; gap: 10px;
@@ -159,13 +167,33 @@
         .demo-btn-9:active, .buy-now-btn-7:active, .buy-link:active { transform: translateY(-1px) scale(0.99); }
 
         .robot-img-4 { /* Section 4 */
-            justify-self: end;
+            width: 100%;
             position: relative;
+            border-radius: 34px;
+            overflow: hidden;
+            background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.32);
+            min-height: clamp(320px, 48vw, 520px);
+        }
+        .robot-img-4::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0.28) 100%);
+            z-index: 1;
+            pointer-events: none;
         }
         .robot-img-4 img {
-            width: 100%; max-width: 480px;
+            width: 100%;
+            height: 100%;
+            max-width: none;
+            object-fit: cover;
+            object-position: center;
+            display: block;
             filter: drop-shadow(0 20px 50px rgba(0, 122, 255, 0.15));
-            animation: floating 6s ease-in-out infinite;
+            animation: none;
+            transform: scale(1.02);
         }
 
         @keyframes floating {
@@ -178,21 +206,24 @@
 .gallery-row-5 {
     width: 100%;
     overflow: hidden;
-    padding: 20px 0;
+    padding: 12px 0 28px;
+    position: relative;
+    mask-image: linear-gradient(to right, transparent 0, black 9%, black 91%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0, black 9%, black 91%, transparent 100%);
 }
 
 .gallery-track {
     display: flex;
     gap: 18px;
     width: max-content;
-    animation: marquee 22s linear infinite;
+    animation: marquee 18s linear infinite;
     will-change: transform;
 }
 
 .p-card {
     flex: 0 0 auto;
-    width: 148px;
-    height: 148px;
+    width: 160px;
+    height: 160px;
     background: #111;
     border: 1px solid var(--glass-border);
     border-radius: 22px;
@@ -239,7 +270,8 @@
 
         .bottom-actions {
             display: flex; justify-content: space-between; align-items: flex-end;
-            margin-top: 30px;
+            margin-top: 34px;
+            gap: 24px;
         }
 
         .features-6 { list-style: none; }
@@ -369,13 +401,13 @@
 
         /* MOBILE RESPONSIVENESS */
         @media (max-width: 900px) {
-            .middle-layout { grid-template-columns: 1fr; text-align: center; gap: 40px; }
+            .middle-layout { gap: 24px; }
             .robot-img-4 {
-                justify-self: stretch;
-                order: -1;
                 width: 100vw;
                 margin-left: calc(50% - 50vw);
                 margin-right: calc(50% - 50vw);
+                border-radius: 0;
+                min-height: 260px;
             }
             .robot-img-4 img { max-width: none; width: 100%; }
             .gallery-row-5 {
@@ -389,7 +421,7 @@
             .bottom-actions { flex-direction: column; align-items: center; gap: 40px; text-align: center; }
             .buy-now-box-7 { text-align: center; }
             .text-area h1 { font-size: 3.5rem; }
-            .p-card { min-width: 110px; height: 110px; }
+            .p-card { min-width: 112px; height: 112px; }
         }
 
         /* SECOND SECTION (Revealed on Explore) */
