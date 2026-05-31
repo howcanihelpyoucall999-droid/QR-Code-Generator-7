@@ -80,13 +80,32 @@
         }
 
         .profile-2 { /* Section 2 */
-            width: 32px; height: 32px;
+            width: 34px; height: 34px;
             border-radius: 50%;
             background: #111;
             border: 1px solid #333;
-            display: flex; align-items: center; justify-content: center;
+            display: inline-flex; align-items: center; justify-content: center;
             cursor: pointer;
+            overflow: hidden;
+            padding: 0;
+            flex: 0 0 auto;
+            position: relative;
         }
+        .profile-2 img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .profile-fallback {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        .profile-2.has-avatar .profile-fallback { display: none; }
 
         .buy-link { 
             text-decoration: none; 
@@ -209,7 +228,7 @@
             content: "";
             position: absolute;
             inset: 0;
-            background: linear-gradient(to right, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.38) 55%, rgba(0,0,0,0.05) 100%);
+            background: linear-gradient(to right, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.25) 35%, rgba(0,0,0,0) 60%);
             z-index: 1;
             pointer-events: none;
         }
@@ -223,31 +242,39 @@
             animation: none;
             transform: scale(1.02);
         }
+        /* Overlay text: pinned to top-left corner */
         .robot-overlay-text {
             position: absolute;
-            top: 0; left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0;
+            left: 0;
             z-index: 2;
+            padding: clamp(18px, 3.5%, 36px);
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            padding: clamp(22px, 5%, 48px);
+            align-items: flex-start;
         }
         .robot-overlay-text .maker-label {
-            margin-bottom: 8px;
+            margin-bottom: 6px;
+            font-size: 0.9rem;
         }
         .robot-overlay-text h1 {
-            font-size: clamp(2.6rem, 7vw, 5rem);
+            font-size: clamp(2rem, 5.5vw, 4rem);
             font-weight: 800;
-            line-height: 0.95;
-            margin-bottom: 14px;
+            line-height: 1;
+            margin-bottom: 10px;
         }
         .robot-overlay-text h1 span { color: var(--electric-blue); }
         .robot-overlay-text .description {
-            margin: 0 0 22px 0;
+            margin: 0 0 16px 0;
             text-align: left;
-            max-width: 360px;
+            max-width: 300px;
+            font-size: 0.9rem;
+        }
+        .robot-overlay-text .demo-btn-9 {
+            padding: 8px 16px;
+            font-size: 11px;
+            gap: 7px;
+            letter-spacing: 0.8px;
         }
 
         @keyframes floating {
@@ -455,6 +482,84 @@
             font-size: 0.9rem;
         }
 
+        .account-panel {
+            position: fixed;
+            top: 0;
+            right: -380px;
+            width: min(340px, 88vw);
+            height: 100vh;
+            background: rgba(7, 10, 18, 0.96);
+            border-left: 1px solid rgba(0, 122, 255, 0.22);
+            backdrop-filter: blur(18px);
+            box-shadow: -20px 0 50px rgba(0,0,0,0.45);
+            z-index: 1501;
+            transition: right 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            padding: 26px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .account-panel.open { right: 0; }
+
+        .account-hero {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px 12px 6px;
+            border-radius: 18px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .account-avatar-wrap {
+            width: 68px;
+            height: 68px;
+            border-radius: 18px;
+            overflow: hidden;
+            flex: 0 0 auto;
+            background: rgba(0,122,255,0.14);
+            border: 1px solid rgba(0,122,255,0.3);
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+        }
+        .account-avatar-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .account-name {
+            font-size: 1.15rem;
+            font-weight: 800;
+            line-height: 1.1;
+        }
+        .account-tag {
+            color: #9fd0ff;
+            font-size: 0.9rem;
+            margin-top: 4px;
+        }
+        .account-card {
+            display: grid;
+            gap: 10px;
+            padding: 16px;
+            border-radius: 18px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .account-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            font-size: 0.95rem;
+        }
+        .account-row span { color: var(--text-dim); }
+        .account-row strong { color: white; font-weight: 700; text-align: right; }
+        .account-note {
+            color: var(--text-dim);
+            font-size: 0.92rem;
+            line-height: 1.45;
+            padding: 0 4px;
+        }
+
         /* MOBILE RESPONSIVENESS */
         @media (max-width: 900px) {
             .hero-container {
@@ -515,9 +620,10 @@
             <img src="logo.png" width="28" alt="D" onerror="this.style.display='none'; this.parentNode.innerText='D'">
         </div>
         <div class="nav-pill">
-            <div class="profile-2" title="User Account">
-                <i data-lucide="user" size="16"></i>
-            </div>
+            <button class="profile-2" id="profileToggle" type="button" title="User Account" aria-label="Open account">
+                <img id="profileAvatar" alt="User avatar">
+                <i data-lucide="user" size="16" class="profile-fallback"></i>
+            </button>
             <a href="#buy" class="buy-link">Buy</a>
             <button class="menu-3" id="menuToggle" aria-label="Open menu" aria-expanded="false"><i data-lucide="menu" size="20"></i></button>
         </div>
@@ -532,11 +638,49 @@
             </button>
         </div>
         <ul class="side-menu-list">
-            <li><a href="#details">Sample <span>01</span></a></li>
+            <li><a href="#" id="menuAccountLink">Account <span>01</span></a></li>
             <li><a href="#buy">Buy Now <span>02</span></a></li>
             <li><a href="#details">Options <span>03</span></a></li>
             <li><a href="#details">Support <span>04</span></a></li>
         </ul>
+    </aside>
+
+    <aside class="account-panel" id="accountPanel" aria-label="Account details">
+        <div class="side-menu-header">
+            <div class="side-menu-title">Account</div>
+            <button class="side-menu-close" id="accountClose" aria-label="Close account">
+                <i data-lucide="x" size="18"></i>
+            </button>
+        </div>
+
+        <div class="account-hero">
+            <div class="account-avatar-wrap">
+                <img id="accountAvatar" alt="Account avatar">
+            </div>
+            <div class="account-meta">
+                <div class="account-name" id="accountName">Dops User</div>
+                <div class="account-tag" id="accountTag">Unique bot identity</div>
+            </div>
+        </div>
+
+        <div class="account-card">
+            <div class="account-row">
+                <span>User ID</span>
+                <strong id="accountId">—</strong>
+            </div>
+            <div class="account-row">
+                <span>Joined</span>
+                <strong id="accountJoined">—</strong>
+            </div>
+            <div class="account-row">
+                <span>Avatar Seed</span>
+                <strong id="accountSeed">—</strong>
+            </div>
+        </div>
+
+        <div class="account-note">
+            This identity is generated automatically and saved in this device.
+        </div>
     </aside>
 
     <!-- Main Viewport Section -->
@@ -551,7 +695,7 @@
                     <h1><span>Dops</span>Bot</h1>
                     <p class="description">A premium robot pet designed with cinematic aesthetics to build your future today.</p>
                     <a href="#" class="demo-btn-9">
-                        <i data-lucide="play" size="14"></i> View Demo
+                        <i data-lucide="play" size="12"></i> View Demo
                     </a>
                 </div>
             </div>
@@ -596,10 +740,77 @@
         </p>
     </section>
 
+    
     <script>
-        
     // Initialize Lucide Icons
     lucide.createIcons();
+
+    // Generate and persist a unique identity for this browser
+    const STORAGE_KEY = 'dopsbot.identity.v1';
+
+    function safeRandomId() {
+        if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+        return 'user-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    }
+
+    function createIdentity() {
+        const now = new Date();
+        const id = safeRandomId();
+        const seed = id;
+        const displayId = 'DB-' + id.replace(/[^a-z0-9]/gi, '').slice(0, 8).toUpperCase();
+        return {
+            id,
+            seed,
+            displayName: 'Dops User',
+            displayId,
+            joinedAt: now.toISOString(),
+            avatar: `https://api.dicebear.com/9.x/bottts/svg?seed=${encodeURIComponent(seed)}`
+        };
+    }
+
+    function loadIdentity() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (parsed && parsed.id && parsed.avatar) return parsed;
+            }
+        } catch (e) {}
+        const created = createIdentity();
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(created)); } catch (e) {}
+        return created;
+    }
+
+    const identity = loadIdentity();
+    const joinedDate = new Date(identity.joinedAt);
+    const joinedText = joinedDate.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    const shortId = identity.displayId || identity.id.slice(0, 8).toUpperCase();
+
+    // Set avatars and account details
+    const profileToggle = document.getElementById('profileToggle');
+    const profileAvatar = document.getElementById('profileAvatar');
+    const accountAvatar = document.getElementById('accountAvatar');
+    const accountName = document.getElementById('accountName');
+    const accountTag = document.getElementById('accountTag');
+    const accountId = document.getElementById('accountId');
+    const accountJoined = document.getElementById('accountJoined');
+    const accountSeed = document.getElementById('accountSeed');
+
+    if (profileAvatar) {
+        profileAvatar.src = identity.avatar;
+        profileAvatar.addEventListener('load', () => {
+            profileToggle && profileToggle.classList.add('has-avatar');
+        });
+        profileAvatar.addEventListener('error', () => {
+            profileToggle && profileToggle.classList.remove('has-avatar');
+        });
+    }
+    if (accountAvatar) accountAvatar.src = identity.avatar;
+    if (accountName) accountName.textContent = identity.displayName;
+    if (accountTag) accountTag.textContent = `Unique identity • ${shortId}`;
+    if (accountId) accountId.textContent = shortId;
+    if (accountJoined) accountJoined.textContent = joinedText;
+    if (accountSeed) accountSeed.textContent = identity.seed.slice(0, 16);
 
     // Make the gallery continuously loop by cloning cards once
     const galleryTrack = document.getElementById('galleryTrack');
@@ -611,42 +822,74 @@
         });
     }
 
-    // Menu toggle
+    // Menu and account panels
     const menuToggle = document.getElementById('menuToggle');
     const menuBackdrop = document.getElementById('menuBackdrop');
     const sideMenu = document.getElementById('sideMenu');
     const menuClose = document.getElementById('menuClose');
+    const menuAccountLink = document.getElementById('menuAccountLink');
 
-    function openMenu() {
-        sideMenu.classList.add('open');
-        menuBackdrop.classList.add('open');
-        menuToggle.classList.add('is-active');
-        menuToggle.setAttribute('aria-expanded', 'true');
-    }
+    const accountPanel = document.getElementById('accountPanel');
+    const accountClose = document.getElementById('accountClose');
 
     function closeMenu() {
-        sideMenu.classList.remove('open');
-        menuBackdrop.classList.remove('open');
-        menuToggle.classList.remove('is-active');
-        menuToggle.setAttribute('aria-expanded', 'false');
+        sideMenu && sideMenu.classList.remove('open');
+        menuBackdrop && menuBackdrop.classList.remove('open');
+        menuToggle && menuToggle.classList.remove('is-active');
+        menuToggle && menuToggle.setAttribute('aria-expanded', 'false');
+    }
+
+    function openMenu() {
+        accountPanel && accountPanel.classList.remove('open');
+        sideMenu && sideMenu.classList.add('open');
+        menuBackdrop && menuBackdrop.classList.add('open');
+        menuToggle && menuToggle.classList.add('is-active');
+        menuToggle && menuToggle.setAttribute('aria-expanded', 'true');
+    }
+
+    function closeAccount() {
+        accountPanel && accountPanel.classList.remove('open');
+        menuBackdrop && menuBackdrop.classList.remove('open');
+    }
+
+    function openAccount() {
+        sideMenu && sideMenu.classList.remove('open');
+        accountPanel && accountPanel.classList.add('open');
+        menuBackdrop && menuBackdrop.classList.add('open');
+        menuToggle && menuToggle.classList.remove('is-active');
+        menuToggle && menuToggle.setAttribute('aria-expanded', 'false');
     }
 
     if (menuToggle && menuBackdrop && sideMenu && menuClose) {
         menuToggle.addEventListener('click', () => {
             const isOpen = sideMenu.classList.contains('open');
-            if (isOpen) {
-                closeMenu();
-            } else {
-                openMenu();
-            }
+            if (isOpen) closeMenu(); else openMenu();
         });
         menuClose.addEventListener('click', closeMenu);
-        menuBackdrop.addEventListener('click', closeMenu);
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') closeMenu();
-        });
-        sideMenu.querySelectorAll('a').forEach(link => link.addEventListener('click', closeMenu));
     }
+
+    if (profileToggle) profileToggle.addEventListener('click', openAccount);
+    if (menuAccountLink) {
+        menuAccountLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            closeMenu();
+            openAccount();
+        });
+    }
+    if (accountClose) accountClose.addEventListener('click', closeAccount);
+    if (menuBackdrop) {
+        menuBackdrop.addEventListener('click', () => {
+            closeMenu();
+            closeAccount();
+        });
+    }
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeMenu();
+            closeAccount();
+        }
+    });
+    if (sideMenu) sideMenu.querySelectorAll('a:not(#menuAccountLink)').forEach(link => link.addEventListener('click', closeMenu));
 
     // Reveal animations on scroll
     const observer = new IntersectionObserver((entries) => {
