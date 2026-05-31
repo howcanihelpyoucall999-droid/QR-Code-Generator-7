@@ -116,71 +116,101 @@
 
         /* MAIN LAYOUT (Single Screen Hero) */
         .hero-container {
-            min-height: 100vh;
+            min-height: auto;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
-            padding: 100px 7% 40px 7%;
+            gap: 12px;
+            padding: 92px 6% 26px;
         }
 
         /* 4, 9: MIDDLE SECTION */
-                .middle-layout {
+        .middle-layout {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 24px;
-            flex-grow: 1;
+            gap: 12px;
             width: 100%;
             max-width: 1120px;
             margin: 0 auto;
+            padding: clamp(16px, 2.6vw, 26px);
+            background: rgba(0, 0, 0, 0.72);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 34px;
+            box-shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(8px);
         }
 
         .text-area {
             z-index: 2;
             text-align: center;
             width: 100%;
+            padding-top: 2px;
         }
-        .text-area h1 { font-size: clamp(3.4rem, 8vw, 6rem); font-weight: 800; margin-bottom: 5px; }
+        .text-area h1 {
+            font-size: clamp(2.6rem, 7vw, 5rem);
+            font-weight: 800;
+            margin-bottom: 4px;
+            line-height: 0.95;
+        }
         .text-area h1 span { color: var(--electric-blue); } /* Blue "Dops" */
 
-        .maker-label { color: var(--text-dim); font-size: 1.1rem; display: block; margin-bottom: 15px; }
-        .description { color: var(--text-dim); max-width: 620px; margin: 0 auto 25px; font-weight: 300; }
+        .maker-label {
+            color: var(--text-dim);
+            font-size: 0.98rem;
+            display: block;
+            margin-bottom: 10px;
+        }
+        .description {
+            color: var(--text-dim);
+            max-width: 540px;
+            margin: 0 auto 18px;
+            font-weight: 300;
+            font-size: 1rem;
+        }
 
         .demo-btn-9 { /* Section 9 */
-            display: inline-flex; align-items: center; gap: 10px;
-            padding: 14px 28px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 24px;
             border: 1px solid rgba(0, 122, 255, 0.8);
             border-radius: 999px;
-            color: white; text-decoration: none; font-size: 14px;
-            font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+            color: white;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
             background: linear-gradient(180deg, rgba(0,122,255,0.95), rgba(0,96,220,0.95));
             box-shadow: 0 10px 24px rgba(0,122,255,0.25), inset 0 1px 0 rgba(255,255,255,0.18);
             transition: var(--transition);
             will-change: transform, box-shadow;
         }
-        .demo-btn-9:hover, .demo-btn-9:focus-visible { 
-            background: linear-gradient(180deg, rgba(35,147,255,1), rgba(0,104,235,1)); 
-            color: white; 
+        .demo-btn-9:hover, .demo-btn-9:focus-visible {
+            background: linear-gradient(180deg, rgba(35,147,255,1), rgba(0,104,235,1));
+            color: white;
             box-shadow: 0 16px 30px rgba(0,122,255,0.36), 0 0 0 3px rgba(0,122,255,0.15);
             outline: none;
         }
-        .demo-btn-9:active, .buy-now-btn-7:active, .buy-link:active { transform: translateY(-1px) scale(0.99); }
+        .demo-btn-9:active, .buy-now-btn-7:active, .buy-link:active {
+            transform: translateY(-1px) scale(0.99);
+        }
 
         .robot-img-4 { /* Section 4 */
             width: 100%;
             position: relative;
-            border-radius: 34px;
+            border-radius: 30px;
             overflow: hidden;
             background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
             border: 1px solid rgba(255,255,255,0.08);
             box-shadow: 0 20px 60px rgba(0,0,0,0.32);
-            min-height: clamp(320px, 48vw, 520px);
+            min-height: clamp(300px, 46vw, 500px);
         }
         .robot-img-4::before {
             content: "";
             position: absolute;
             inset: 0;
-            background: linear-gradient(180deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0.28) 100%);
+            background: linear-gradient(180deg, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.26) 100%);
             z-index: 1;
             pointer-events: none;
         }
@@ -201,12 +231,12 @@
             50% { transform: translateY(-25px); }
         }
 
-        
+
 /* 5: HORIZONTAL GALLERY */
 .gallery-row-5 {
     width: 100%;
     overflow: hidden;
-    padding: 12px 0 28px;
+    padding: 6px 0 18px;
     position: relative;
     mask-image: linear-gradient(to right, transparent 0, black 9%, black 91%, transparent 100%);
     -webkit-mask-image: linear-gradient(to right, transparent 0, black 9%, black 91%, transparent 100%);
@@ -214,7 +244,7 @@
 
 .gallery-track {
     display: flex;
-    gap: 18px;
+    gap: 14px;
     width: max-content;
     animation: marquee 18s linear infinite;
     will-change: transform;
@@ -222,8 +252,8 @@
 
 .p-card {
     flex: 0 0 auto;
-    width: 160px;
-    height: 160px;
+    width: 150px;
+    height: 150px;
     background: #111;
     border: 1px solid var(--glass-border);
     border-radius: 22px;
@@ -263,15 +293,17 @@
 
 @media (max-width: 900px) {
     .gallery-track { gap: 14px; }
-    .p-card { width: 132px; height: 132px; }
+    .p-card { width: 112px; height: 112px; }
 }
 
 /* 6, 7: BOTTOM ROW */
 
         .bottom-actions {
-            display: flex; justify-content: space-between; align-items: flex-end;
-            margin-top: 34px;
-            gap: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-top: 8px;
+            gap: 18px;
         }
 
         .features-6 { list-style: none; }
@@ -300,9 +332,9 @@
             transition: var(--transition);
             will-change: transform, box-shadow;
         }
-        .buy-now-btn-7:hover, .buy-now-btn-7:focus-visible { 
-            background: linear-gradient(180deg, rgba(35,147,255,1), rgba(0,104,235,1)); 
-            color: white; 
+        .buy-now-btn-7:hover, .buy-now-btn-7:focus-visible {
+            background: linear-gradient(180deg, rgba(35,147,255,1), rgba(0,104,235,1));
+            color: white;
             box-shadow: 0 16px 30px rgba(0,122,255,0.36), 0 0 0 3px rgba(0,122,255,0.15);
             outline: none;
         }
@@ -401,7 +433,17 @@
 
         /* MOBILE RESPONSIVENESS */
         @media (max-width: 900px) {
-            .middle-layout { gap: 24px; }
+            .hero-container {
+                padding: 82px 4% 22px;
+                gap: 10px;
+            }
+            .middle-layout {
+                padding: 14px;
+                gap: 10px;
+                border-radius: 28px;
+            }
+            .text-area h1 { font-size: 3rem; }
+            .description { margin: 0 auto 18px; font-size: 0.95rem; }
             .robot-img-4 {
                 width: 100vw;
                 margin-left: calc(50% - 50vw);
@@ -417,13 +459,22 @@
                 padding-left: 0;
                 padding-right: 0;
             }
-            .description { margin: 0 auto 25px; }
-            .bottom-actions { flex-direction: column; align-items: center; gap: 40px; text-align: center; }
+            .bottom-actions {
+                flex-direction: column;
+                align-items: center;
+                gap: 24px;
+                text-align: center;
+            }
             .buy-now-box-7 { text-align: center; }
-            .text-area h1 { font-size: 3.5rem; }
             .p-card { min-width: 112px; height: 112px; }
         }
 
+        /* SECOND SECTION (Revealed on Explore) */
+        .details-section {
+            padding: 120px 10%;
+            background: #000;
+            border-top: 1px solid var(--glass-border);
+        }
         /* SECOND SECTION (Revealed on Explore) */
         .details-section {
             padding: 120px 10%;
