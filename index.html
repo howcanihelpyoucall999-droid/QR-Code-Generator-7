@@ -128,7 +128,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 12px;
+            gap: 0;
             width: 100%;
             max-width: 1120px;
             margin: 0 auto;
@@ -201,7 +201,6 @@
             position: relative;
             border-radius: 30px;
             overflow: hidden;
-            background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
             border: 1px solid rgba(255,255,255,0.08);
             box-shadow: 0 20px 60px rgba(0,0,0,0.32);
             min-height: clamp(300px, 46vw, 500px);
@@ -210,7 +209,7 @@
             content: "";
             position: absolute;
             inset: 0;
-            background: linear-gradient(180deg, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.26) 100%);
+            background: linear-gradient(to right, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.38) 55%, rgba(0,0,0,0.05) 100%);
             z-index: 1;
             pointer-events: none;
         }
@@ -221,9 +220,34 @@
             object-fit: cover;
             object-position: center;
             display: block;
-            filter: drop-shadow(0 20px 50px rgba(0, 122, 255, 0.15));
             animation: none;
             transform: scale(1.02);
+        }
+        .robot-overlay-text {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: clamp(22px, 5%, 48px);
+        }
+        .robot-overlay-text .maker-label {
+            margin-bottom: 8px;
+        }
+        .robot-overlay-text h1 {
+            font-size: clamp(2.6rem, 7vw, 5rem);
+            font-weight: 800;
+            line-height: 0.95;
+            margin-bottom: 14px;
+        }
+        .robot-overlay-text h1 span { color: var(--electric-blue); }
+        .robot-overlay-text .description {
+            margin: 0 0 22px 0;
+            text-align: left;
+            max-width: 360px;
         }
 
         @keyframes floating {
@@ -520,17 +544,16 @@
         
         <!-- 4, 9: Product Intro -->
         <section class="middle-layout">
-            <div class="text-area">
-                <span class="maker-label">By Dops Machine</span>
-                <h1><span>Dops</span>Bot</h1>
-                <p class="description">A premium robot pet designed with cinematic aesthetics to build your future today.</p>
-                <a href="#" class="demo-btn-9">
-                    <i data-lucide="play" size="14"></i> View Demo
-                </a>
-            </div>
-
             <div class="robot-img-4">
                 <img src="robot.png" alt="DopsBot" onerror="this.src='https://via.placeholder.com/500/111/444?text=robot.png'">
+                <div class="robot-overlay-text">
+                    <span class="maker-label">By Dops Machine</span>
+                    <h1><span>Dops</span>Bot</h1>
+                    <p class="description">A premium robot pet designed with cinematic aesthetics to build your future today.</p>
+                    <a href="#" class="demo-btn-9">
+                        <i data-lucide="play" size="14"></i> View Demo
+                    </a>
+                </div>
             </div>
         </section>
 
