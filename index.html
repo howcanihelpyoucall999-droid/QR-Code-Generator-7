@@ -602,18 +602,267 @@
             .p-card { min-width: 112px; height: 112px; }
         }
 
-        /* SECOND SECTION (Revealed on Explore) */
+        /* TECHNICAL SPECS SECTION */
         .details-section {
-            padding: 120px 10%;
+            padding: 100px 5%;
             background: #000;
             border-top: 1px solid var(--glass-border);
         }
-        /* SECOND SECTION (Revealed on Explore) */
-        .details-section {
-            padding: 120px 10%;
-            background: #000;
-            border-top: 1px solid var(--glass-border);
+        .specs-container {
+            max-width: 900px;
+            margin: 0 auto;
         }
+        .details-section h2 {
+            font-size: clamp(2.2rem, 5vw, 3.5rem);
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 60px;
+            letter-spacing: -1px;
+        }
+        .specs-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: clamp(30px, 6vw, 80px);
+            align-items: center;
+        }
+
+        .spec-item {
+            display: flex;
+            align-items: center;
+            gap: clamp(12px, 3vw, 24px);
+        }
+        .spec-icon {
+            width: clamp(60px, 10vw, 80px);
+            height: clamp(60px, 10vw, 80px);
+            flex-shrink: 0;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .spec-icon img { width: 100%; height: 100%; object-fit: cover; }
+        
+        .spec-label {
+            font-size: clamp(1rem, 2.5vw, 1.3rem);
+            font-weight: 600;
+            color: #fff;
+            line-height: 1.2;
+        }
+        .spec-label span { color: var(--electric-blue); }
+
+        .spec-card {
+            width: 100%;
+            aspect-ratio: 1/1;
+            background: #0a0a0a;
+            border: 1px solid var(--glass-border);
+            border-radius: 28px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+        }
+        .spec-card img { width: 100%; height: 100%; object-fit: cover; }
+
+        .specs-footer {
+            margin-top: 24px;
+            display: flex;
+            justify-content: center;
+        }
+        .badge-cute {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            font-size: clamp(1.2rem, 3vw, 1.6rem);
+            font-weight: 800;
+        }
+        .badge-cute img { width: 32px; height: 32px; }
+        .badge-cute span { color: var(--electric-blue); }
+
+        /* WAVE DIVIDER */
+        .wave-wrapper {
+            width: 100%;
+            background: #000;
+            overflow: hidden;
+            line-height: 0;
+            padding: 10px 0 20px;
+        }
+        .wave-svg {
+            width: 200%;
+            height: clamp(40px, 8vw, 90px);
+            stroke: var(--electric-blue);
+            stroke-width: 30;
+            fill: none;
+            filter: drop-shadow(0 0 12px rgba(0, 122, 255, 0.9));
+            animation: waveScroll 14s linear infinite;
+        }
+
+        @keyframes waveScroll {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        /* MOBILE FIX: Two-column alternating layout matching sketch */
+        @media (max-width: 768px) {
+            /* Reset grid to two fixed columns — never collapse */
+            .specs-grid {
+                display: grid;
+                grid-template-columns: 55% 45%;
+                gap: 20px 0;
+                padding: 0 16px;
+                align-items: center;
+            }
+
+            /* Each spec-item: icon + text inline, no wrapping */
+            .spec-item {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                text-align: left;
+                justify-content: flex-start;
+                padding: 6px 8px 6px 0;
+            }
+
+            /* Icon circles: fixed 56px */
+            .spec-icon {
+                width: 56px !important;
+                height: 56px !important;
+                min-width: 56px;
+                border-radius: 50%;
+            }
+
+            /* Label text: bold, large, blue keywords at 900 weight */
+            .spec-label {
+                font-size: 15px !important;
+                font-weight: 800 !important;
+                line-height: 1.35;
+                word-break: break-word;
+            }
+            .spec-label span {
+                color: #007AFF !important;
+                font-weight: 900 !important;
+            }
+
+            /* Image cards: fixed 130×130 squares */
+            .spec-card {
+                width: 130px !important;
+                height: 130px !important;
+                max-width: 130px !important;
+                aspect-ratio: unset !important;
+                border-radius: 20px;
+                margin: 0;
+                align-self: center;
+            }
+
+            /* ── Row 1: icon-left col1, card-right col2 ── */
+            .row-1-item {
+                order: 1;
+                grid-column: 1;
+                align-self: center;
+            }
+            .row-1-card {
+                order: 2;
+                grid-column: 2;
+                justify-self: end;
+                align-self: start;
+            }
+
+            /* ── Row 2: card-left col1, icon-right col2 ── */
+            .row-2-card {
+                order: 3;
+                grid-column: 1;
+                justify-self: start;
+                align-self: center;
+                width: 100px !important;
+                height: 100px !important;
+                max-width: 100px !important;
+            }
+            .row-2-item {
+                order: 4;
+                grid-column: 2;
+                justify-content: flex-start;
+                padding-left: 4px;
+                gap: 5px;
+            }
+            .row-2-item .spec-icon {
+                width: 40px !important;
+                height: 40px !important;
+                min-width: 40px;
+            }
+            .row-2-item .spec-label {
+                font-size: 13px !important;
+                line-height: 1.3;
+            }
+
+            /* ── Row 3: icon-left col1, card-right col2 ── */
+            .row-3-item {
+                order: 5;
+                grid-column: 1;
+                align-self: center;
+            }
+            .row-3-card {
+                order: 6;
+                grid-column: 2;
+                justify-self: end;
+                align-self: end;
+            }
+
+            /* ── Row 4: card-left col1, icon-right col2 ── */
+            .row-4-card {
+                order: 7;
+                grid-column: 1;
+                justify-self: start;
+                align-self: center;
+                width: 100px !important;
+                height: 100px !important;
+                max-width: 100px !important;
+            }
+            .row-4-item {
+                order: 8;
+                grid-column: 2;
+                justify-content: flex-start;
+                padding-left: 4px;
+                gap: 5px;
+            }
+            .row-4-item .spec-icon {
+                width: 40px !important;
+                height: 40px !important;
+                min-width: 40px;
+            }
+            .row-4-item .spec-label {
+                font-size: 13px !important;
+                line-height: 1.3;
+            }
+
+            /* ── Row 5: icon-left col1, card-right col2 ── */
+            .row-5-item {
+                order: 9;
+                grid-column: 1;
+                align-self: center;
+            }
+            .row-5-card {
+                order: 10;
+                grid-column: 2;
+                justify-self: end;
+                align-self: center;
+            }
+
+            /* Footer badge centered */
+            .specs-footer {
+                margin-top: 32px;
+            }
+
+            /* Wave: taller and bolder on mobile */
+            .wave-wrapper {
+                padding: 4px 0 12px;
+            }
+            .wave-svg {
+                height: 60px !important;
+                stroke-width: 30 !important;
+            }
+        }
+
+        img:not([src]), img[src=""] { opacity: 0.1 !important; }
     </style>
 </head>
 <body>
@@ -736,13 +985,73 @@
         </section>
 </main>
 
-    <!-- Details Section -->
+    <!-- Technical Specs Section -->
     <section class="details-section" id="details">
-        <h2 style="font-size: 3rem; font-weight: 800; margin-bottom: 20px;">Technical Specs</h2>
-        <p style="color: var(--text-dim); max-width: 600px;">
-            DopsBot features an advanced neural processor and precision-engineered joints for life-like movement. Explore the depth of robotics.
-        </p>
+        <div class="specs-container">
+            <h2>Technical Specs</h2>
+            <div class="specs-grid">
+                <!-- Row 1 -->
+                <div class="spec-item row-1-item">
+                    <div class="spec-icon"><img src="i.png" alt="" onerror="this.style.opacity='0.1'"></div>
+                    <div class="spec-label"><span>Bluetooth</span> Control</div>
+                </div>
+                <div class="spec-card row-1-card">
+                    <img src="c1.png" alt="" onerror="this.style.opacity='0.1'">
+                </div>
+
+                <!-- Row 2 -->
+                <div class="spec-card row-2-card">
+                    <img src="c2.png" alt="" onerror="this.style.opacity='0.1'">
+                </div>
+                <div class="spec-item row-2-item">
+                    <div class="spec-icon"><img src="i1.png" alt="" onerror="this.style.opacity='0.1'"></div>
+                    <div class="spec-label">Run with <span>regular</span> charger</div>
+                </div>
+
+                <!-- Row 3 -->
+                <div class="spec-item row-3-item">
+                    <div class="spec-icon"><img src="i2.png" alt="" onerror="this.style.opacity='0.1'"></div>
+                    <div class="spec-label"><span>Touch</span> sensors</div>
+                </div>
+                <div class="spec-card row-3-card">
+                    <img src="c3.png" alt="" onerror="this.style.opacity='0.1'">
+                </div>
+
+                <!-- Row 4 -->
+                <div class="spec-card row-4-card">
+                    <img src="c4.png" alt="" onerror="this.style.opacity='0.1'">
+                </div>
+                <div class="spec-item row-4-item">
+                    <div class="spec-icon"><img src="i3.png" alt="" onerror="this.style.opacity='0.1'"></div>
+                    <div class="spec-label">Good for <span>Decoration</span></div>
+                </div>
+
+                <!-- Row 5 -->
+                <div class="spec-item row-5-item">
+                    <div class="spec-icon"><img src="i5.png" alt="" onerror="this.style.opacity='0.1'"></div>
+                    <div class="spec-label">Good for <span>learning</span></div>
+                </div>
+                <div class="spec-card row-5-card">
+                    <img src="c5.png" alt="" onerror="this.style.opacity='0.1'">
+                </div>
+            </div>
+
+            <div class="specs-footer">
+                <div class="badge-cute">
+                    <img src="c.png" alt="" onerror="this.style.opacity='0.1'">
+                    Expensive <span>Cute</span>
+                </div>
+            </div>
+        </div>
     </section>
+
+    <!-- Animated Wave Divider -->
+    <div class="wave-wrapper">
+        <svg class="wave-svg" viewBox="0 0 1000 100" preserveAspectRatio="none">
+            <!-- Continuous sine curve logic -->
+            <path d="M0,50 Q125,0 250,50 T500,50 T750,50 T1000,50 M1000,50 Q1125,0 1250,50 T1500,50 T1750,50 T2000,50" />
+        </svg>
+    </div>
 
     
     <script>
