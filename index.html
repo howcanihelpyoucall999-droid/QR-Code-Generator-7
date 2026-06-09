@@ -153,7 +153,6 @@
             margin: 0 auto;
             padding: clamp(16px, 2.6vw, 26px);
             background: rgba(0, 0, 0, 0.72);
-            border: 1px solid rgba(255, 255, 255, 0.06);
             border-radius: 34px;
             box-shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
             backdrop-filter: blur(8px);
@@ -566,6 +565,13 @@
 
         /* MOBILE RESPONSIVENESS */
         @media (max-width: 900px) {
+            nav {
+                padding: 10px 4%;
+            }
+            .logo-1 {
+                width: 42px;
+                height: 42px;
+            }
             .hero-container {
                 padding: 82px 4% 22px;
                 gap: 10px;
@@ -605,8 +611,6 @@
         /* TECHNICAL SPECS SECTION */
         .details-section {
             padding: 100px 5%;
-            background: #000;
-            border-top: 1px solid var(--glass-border);
         }
         .specs-container {
             max-width: 900px;
