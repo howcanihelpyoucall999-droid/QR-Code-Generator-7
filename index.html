@@ -1,25 +1,19 @@
 <!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<title>AI Passport Photo App</title>
-<style>
-body{font-family:Arial;max-width:900px;margin:auto;padding:20px}
-.card{border:1px solid #ddd;padding:20px;border-radius:12px}
-label{display:block;margin-top:10px}
-button{margin-top:15px;padding:10px 16px}
-</style>
-</head>
-<body>
-<div class="card">
-<h1>AI Passport Photo App</h1>
-<input type="file"><br>
+<html><head>
+<title>AI Passport Photo</title>
+<link rel='stylesheet' href='/static/css/style.css'>
+</head><body>
+<div class='container'>
+<h1>AI Passport Photo Maker</h1>
+<form id='form' enctype='multipart/form-data'>
+<input type='file' name='image' required>
 <label>Background Color</label>
-<input type="color" value="#ffffff">
+<input type='color' name='bg' value='#ffffff'>
 <label>Copies</label>
-<input type="number" value="8" min="1" max="50">
-<button>Generate</button>
-<p>Replace demo backend with your Gemini/image-processing pipeline.</p>
+<input type='number' name='copies' value='8'>
+<button type='submit'>Generate</button>
+</form>
+<div id='result'></div>
 </div>
-</body>
-</html>
+<script src='/static/js/app.js'></script>
+</body></html>
