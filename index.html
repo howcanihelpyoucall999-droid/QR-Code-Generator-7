@@ -505,6 +505,10 @@
     <span class="btn-text"></span>
   </button>
 
+  <button id="testConnBtn" style="width:100%;margin-top:10px;padding:12px;border:1px dashed var(--line);border-radius:10px;background:transparent;color:var(--ink-soft);font-family:'Space Mono',monospace;font-size:12px;cursor:pointer;">
+    Test connection to function (no image needed)
+  </button>
+
   <!-- Results -->
   <div class="results" id="resultsSection" style="display:none">
     <div class="results-head">
@@ -521,7 +525,7 @@
 /* =========================================================
    CONFIGURE THESE TWO VALUES FOR YOUR SUPABASE PROJECT
    ========================================================= */
-const SUPABASE_FUNCTION_URL = "https://jwqgrdcsawfcjshptdth.supabase.co/functions/v1/process-image";
+const SUPABASE_FUNCTION_URL = "https://jwqgrdcsawfcjshptdth.supabase.co/functions/v1/super-function";
 const SUPABASE_ANON_KEY = "sb_publishable_ZK1wxjCTUOhvicZoO_hHGQ_9AchSwSE";
 /* ========================================================= */
 
@@ -709,7 +713,10 @@ generateBtn.addEventListener('click', async () => {
   } catch (err) {
     resultsSection.style.display = totalGenerated > 0 ? 'block' : 'none';
     resultsGrid.querySelectorAll('.skeleton').forEach(s => s.remove());
-    showError(err.message || 'Something went wrong talking to the server.');
+    const detail = (err && err.message === 'Failed to fetch')
+      ? 'Failed to fetch — the browser could not reach the function URL at all. This usually means: (a) Verify JWT is still ON for the function, (b) the URL below is wrong, or (c) CORS preflight was blocked. URL used: ' + SUPABASE_FUNCTION_URL
+      : (err.message || 'Something went wrong talking to the server.');
+    showError(detail);
   } finally {
     generateBtn.disabled = false;
     generateBtn.classList.remove('loading');
@@ -761,6 +768,28 @@ function renderResults(images){
 
 updateGenerateState();
 updateFrameCounter();
+
+/* ---------- Connection test ---------- */
+document.getElementById('testConnBtn').addEventListener('click', async () => {
+  clearError();
+  const btn = document.getElementById('testConnBtn');
+  btn.textContent = 'Testing…';
+  try {
+    const res = await fetch(SUPABASE_FUNCTION_URL, {
+      method: 'OPTIONS',
+      headers: {
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'apikey': SUPABASE_ANON_KEY,
+      },
+    });
+    showError(`Reachable. OPTIONS responded with status ${res.status}. ${res.status === 200 || res.status === 204 ? 'CORS preflight looks fine — try Generate now.' : 'Unexpected status — check Verify JWT setting and that the function name matches exactly.'}`);
+  } catch (err) {
+    showError('Still unreachable at the network level: ' + (err.message || err) + '. Double check the function URL is exactly: ' + SUPABASE_FUNCTION_URL + ' — and that "Verify JWT" is OFF in the function settings.');
+  } finally {
+    btn.textContent = 'Test connection to function (no image needed)';
+  }
+});
+
 </script>
 
 </body>
