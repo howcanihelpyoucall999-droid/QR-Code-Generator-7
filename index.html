@@ -1,118 +1,564 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Passport AI Fixed</title>
-<style>
-body{font-family:Arial,sans-serif;background:#111827;color:#fff;padding:20px}
-input,button{padding:10px;margin:5px;width:100%;max-width:500px}
-canvas{max-width:100%;border:1px solid #444;margin-top:10px}
-button{background:#2563eb;color:#fff;border:none}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DopsBot | Futuristic Robotics by Dops Machine</title>
+    <!-- Icons and Fonts -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --electric-blue: #007AFF;
+            --bg-dark: #050505;
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-main: #ffffff;
+            --text-dim: #888888;
+            --transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            overflow-x: hidden;
+            line-height: 1.4;
+        }
+
+        /* FIXED NOTHING-STYLE DOT BACKGROUND */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            /* Fixed dot texture from your image */
+            background-image: radial-gradient(rgba(255, 255, 255, 0.12) 1.6px, transparent 1.6px);
+            background-size:  42px 42px;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* 1, 2, 3: HEADER SECTION */
+        nav {
+            position: fixed;
+            top: 0; left: 0; width: 100%;
+            padding: 20px 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .logo-1 { /* Section 1 */
+            width: 55px; height: 55px;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(15px);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            transition: var(--transition);
+            overflow: hidden;
+        }
+        .logo-1 img {
+            width: 82%;
+            height: 82%;
+            object-fit: contain;
+            display: block;
+        }
+        .logo-1:hover { border-color: var(--electric-blue); transform: rotate(5deg); }
+
+        .nav-pill { /* Sections 2 & 3 Combined in a glass capsule */
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(15px);
+            padding: 6px 20px;
+            border-radius: 40px;
+            display: flex; align-items: center; gap: 15px;
+        }
+
+        .profile-2 { /* Section 2 */
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            background: #111;
+            border: 1px solid #333;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+        }
+
+        .buy-link { 
+            text-decoration: none; 
+            color: #9fd0ff; 
+            font-weight: 700; 
+            font-size: 14px;
+            padding: 8px 16px;
+            border: 1.5px solid rgba(0, 122, 255, 0.75);
+            border-radius: 14px;
+            background: rgba(0, 122, 255, 0.08);
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
+            transition: var(--transition);
+        }
+        .buy-link:hover { 
+            background: rgba(0, 122, 255, 0.16);
+            box-shadow: 0 10px 25px rgba(0, 122, 255, 0.18);
+        }
+
+        .menu-3 { /* Section 3 */
+            background: none; border: none; color: white; cursor: pointer;
+            padding-left: 10px; border-left: 1px solid var(--glass-border);
+            transition: var(--transition);
+        }
+        .menu-3:hover { color: #9fd0ff; }
+
+        .menu-3.is-active { color: #9fd0ff; }
+
+        /* MAIN LAYOUT (Single Screen Hero) */
+        .hero-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 100px 7% 40px 7%;
+        }
+
+        /* 4, 9: MIDDLE SECTION */
+        .middle-layout {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            align-items: center;
+            flex-grow: 1;
+        }
+
+        .text-area { z-index: 2; }
+        .text-area h1 { font-size: clamp(3.5rem, 8vw, 6rem); font-weight: 800; margin-bottom: 5px; }
+        .text-area h1 span { color: var(--electric-blue); } /* Blue "Dops" */
+        
+        .maker-label { color: var(--text-dim); font-size: 1.1rem; display: block; margin-bottom: 15px; }
+        .description { color: var(--text-dim); max-width: 380px; margin-bottom: 25px; font-weight: 300; }
+
+        .demo-btn-9 { /* Section 9 */
+            display: inline-flex; align-items: center; gap: 10px;
+            padding: 14px 28px;
+            border: 1px solid rgba(0, 122, 255, 0.8);
+            border-radius: 999px;
+            color: white; text-decoration: none; font-size: 14px;
+            font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+            background: linear-gradient(180deg, rgba(0,122,255,0.95), rgba(0,96,220,0.95));
+            box-shadow: 0 10px 24px rgba(0,122,255,0.25), inset 0 1px 0 rgba(255,255,255,0.18);
+            transition: var(--transition);
+            will-change: transform, box-shadow;
+        }
+        .demo-btn-9:hover, .demo-btn-9:focus-visible { 
+            background: linear-gradient(180deg, rgba(35,147,255,1), rgba(0,104,235,1)); 
+            color: white; 
+            box-shadow: 0 16px 30px rgba(0,122,255,0.36), 0 0 0 3px rgba(0,122,255,0.15);
+            outline: none;
+        }
+        .demo-btn-9:active, .buy-now-btn-7:active, .buy-link:active { transform: translateY(-1px) scale(0.99); }
+
+        .robot-img-4 { /* Section 4 */
+            justify-self: end;
+            position: relative;
+        }
+        .robot-img-4 img {
+            width: 100%; max-width: 480px;
+            filter: drop-shadow(0 20px 50px rgba(0, 122, 255, 0.15));
+            animation: floating 6s ease-in-out infinite;
+        }
+
+        @keyframes floating {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-25px); }
+        }
+
+        
+/* 5: HORIZONTAL GALLERY */
+.gallery-row-5 {
+    width: 100%;
+    overflow: hidden;
+    padding: 20px 0;
+}
+
+.gallery-track {
+    display: flex;
+    gap: 18px;
+    width: max-content;
+    animation: marquee 22s linear infinite;
+    will-change: transform;
+}
+
+.p-card {
+    flex: 0 0 auto;
+    width: 148px;
+    height: 148px;
+    background: #111;
+    border: 1px solid var(--glass-border);
+    border-radius: 22px;
+    overflow: hidden;
+    position: relative;
+    backdrop-filter: blur(10px);
+    transition: var(--transition);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.24);
+}
+
+.p-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+}
+
+.p-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+    pointer-events: none;
+}
+
+.p-card:hover {
+    border-color: var(--electric-blue);
+    transform: translateY(-2px) scale(1.03);
+}
+
+@keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+}
+
+@media (max-width: 900px) {
+    .gallery-track { gap: 14px; }
+    .p-card { width: 132px; height: 132px; }
+}
+
+/* 6, 7: BOTTOM ROW */
+
+        .bottom-actions {
+            display: flex; justify-content: space-between; align-items: flex-end;
+            margin-top: 30px;
+        }
+
+        .features-6 { list-style: none; }
+        .features-6 li {
+            font-size: 1rem; color: var(--text-dim); margin-bottom: 8px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .features-6 li i { color: var(--electric-blue); }
+
+        .buy-now-box-7 { text-align: right; }
+        .buy-now-btn-7 {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px 46px;
+            background: linear-gradient(180deg, rgba(0,122,255,0.98), rgba(0,96,220,0.98));
+            color: white;
+            border: 1px solid rgba(0,122,255,0.8);
+            border-radius: 18px;
+            font-weight: 800;
+            font-size: 1.25rem;
+            text-decoration: none;
+            margin-bottom: 10px;
+            letter-spacing: 0.3px;
+            box-shadow: 0 10px 24px rgba(0,122,255,0.25), inset 0 1px 0 rgba(255,255,255,0.18);
+            transition: var(--transition);
+            will-change: transform, box-shadow;
+        }
+        .buy-now-btn-7:hover, .buy-now-btn-7:focus-visible { 
+            background: linear-gradient(180deg, rgba(35,147,255,1), rgba(0,104,235,1)); 
+            color: white; 
+            box-shadow: 0 16px 30px rgba(0,122,255,0.36), 0 0 0 3px rgba(0,122,255,0.15);
+            outline: none;
+        }
+        .slogan-7 { color: var(--text-dim); font-size: 0.9rem; line-height: 1.2; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* 8: EXPLORE BUTTON */
+        .explore-8 {
+            position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%);
+            background: none; border: none; color: var(--text-dim);
+            cursor: pointer; font-size: 11px; letter-spacing: 2px;
+            text-transform: uppercase; transition: 0.3s;
+        }
+        .explore-8:hover { color: white; }
+        .explore-8 i { display: block; margin: 5px auto 0; animation: bounce 2s infinite; }
+
+        @keyframes bounce { 0%, 20%, 50%, 80%, 100% {transform: translateY(0);} 40% {transform: translateY(7px);} }
+
+        /* SLIDE MENU */
+        .menu-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            opacity: 0;
+            visibility: hidden;
+            transition: 0.35s ease;
+            z-index: 1400;
+        }
+        .menu-backdrop.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .side-menu {
+            position: fixed;
+            top: 0;
+            right: -320px;
+            width: min(300px, 86vw);
+            height: 100vh;
+            background: rgba(7, 10, 18, 0.96);
+            border-left: 1px solid rgba(0, 122, 255, 0.22);
+            backdrop-filter: blur(18px);
+            box-shadow: -20px 0 50px rgba(0,0,0,0.45);
+            z-index: 1500;
+            transition: right 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            padding: 26px 20px;
+        }
+        .side-menu.open {
+            right: 0;
+        }
+        .side-menu-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 26px;
+        }
+        .side-menu-title {
+            font-size: 1.1rem;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+        }
+        .side-menu-close {
+            background: rgba(0, 122, 255, 0.12);
+            border: 1px solid rgba(0, 122, 255, 0.35);
+            color: white;
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            cursor: pointer;
+        }
+        .side-menu-list {
+            list-style: none;
+            display: grid;
+            gap: 12px;
+        }
+        .side-menu-list a {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            text-decoration: none;
+            color: white;
+            padding: 14px 16px;
+            border-radius: 14px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            transition: var(--transition);
+        }
+        .side-menu-list a:hover {
+            transform: translateX(-3px);
+            background: rgba(0,122,255,0.14);
+            border-color: rgba(0,122,255,0.26);
+        }
+        .side-menu-list span {
+            color: #9fd0ff;
+            font-size: 0.9rem;
+        }
+
+        /* MOBILE RESPONSIVENESS */
+        @media (max-width: 900px) {
+            .middle-layout { grid-template-columns: 1fr; text-align: center; gap: 40px; }
+            .robot-img-4 {
+                justify-self: stretch;
+                order: -1;
+                width: 100vw;
+                margin-left: calc(50% - 50vw);
+                margin-right: calc(50% - 50vw);
+            }
+            .robot-img-4 img { max-width: none; width: 100%; }
+            .gallery-row-5 {
+                width: 100vw;
+                margin-left: calc(50% - 50vw);
+                margin-right: calc(50% - 50vw);
+                padding-left: 0;
+                padding-right: 0;
+            }
+            .description { margin: 0 auto 25px; }
+            .bottom-actions { flex-direction: column; align-items: center; gap: 40px; text-align: center; }
+            .buy-now-box-7 { text-align: center; }
+            .text-area h1 { font-size: 3.5rem; }
+            .p-card { min-width: 110px; height: 110px; }
+        }
+
+        /* SECOND SECTION (Revealed on Explore) */
+        .details-section {
+            padding: 120px 10%;
+            background: #000;
+            border-top: 1px solid var(--glass-border);
+        }
+    </style>
 </head>
 <body>
-<h2>Passport AI (Fixed Version)</h2>
 
-<input type="password" id="geminiKey" placeholder="AQ.Ab8RN6KX2IiNjmkVYLcAr7BHVdAgfXhuwA1K8Jh0TKNQW2gQuQ">
-<input type="file" id="fileInput" accept="image/*">
-<button id="processBtn">Process Image</button>
+    <!-- 1, 2, 3: Navigation Area -->
+    <nav>
+        <div class="logo-1">
+            <img src="logo.png" width="28" alt="D" onerror="this.style.display='none'; this.parentNode.innerText='D'">
+        </div>
+        <div class="nav-pill">
+            <div class="profile-2" title="User Account">
+                <i data-lucide="user" size="16"></i>
+            </div>
+            <a href="#buy" class="buy-link">Buy</a>
+            <button class="menu-3" id="menuToggle" aria-label="Open menu" aria-expanded="false"><i data-lucide="menu" size="20"></i></button>
+        </div>
+    </nav>
 
-<p id="status">Ready</p>
+    <div class="menu-backdrop" id="menuBackdrop"></div>
+    <aside class="side-menu" id="sideMenu" aria-label="Menu">
+        <div class="side-menu-header">
+            <div class="side-menu-title">Menu</div>
+            <button class="side-menu-close" id="menuClose" aria-label="Close menu">
+                <i data-lucide="x" size="18"></i>
+            </button>
+        </div>
+        <ul class="side-menu-list">
+            <li><a href="#details">Sample <span>01</span></a></li>
+            <li><a href="#buy">Buy Now <span>02</span></a></li>
+            <li><a href="#details">Options <span>03</span></a></li>
+            <li><a href="#details">Support <span>04</span></a></li>
+        </ul>
+    </aside>
 
-<canvas id="sourceCanvas"></canvas>
-<canvas id="resultCanvas"></canvas>
+    <!-- Main Viewport Section -->
+    <main class="hero-container">
+        
+        <!-- 4, 9: Product Intro -->
+        <section class="middle-layout">
+            <div class="text-area">
+                <span class="maker-label">By Dops Machine</span>
+                <h1><span>Dops</span>Bot</h1>
+                <p class="description">A premium robot pet designed with cinematic aesthetics to build your future today.</p>
+                <a href="#" class="demo-btn-9">
+                    <i data-lucide="play" size="14"></i> View Demo
+                </a>
+            </div>
 
-<script>
-let sourceImg=null;
+            <div class="robot-img-4">
+                <img src="robot.png" alt="DopsBot" onerror="this.src='https://via.placeholder.com/500/111/444?text=robot.png'">
+            </div>
+        </section>
 
-fileInput.onchange=(e)=>{
- const file=e.target.files[0];
- if(!file) return;
+        
+<!-- 5: Horizontal Image Gallery -->
+<section class="gallery-row-5">
+    <div class="gallery-track" id="galleryTrack">
+        <div class="p-card"><img src="p1.png" alt="p1" onerror="this.style.display='none'"></div>
+        <div class="p-card"><img src="p2.png" alt="p2" onerror="this.style.display='none'"></div>
+        <div class="p-card"><img src="p3.png" alt="p3" onerror="this.style.display='none'"></div>
+        <div class="p-card"><img src="p4.png" alt="p4" onerror="this.style.display='none'"></div>
+        <div class="p-card"><img src="p5.png" alt="p5" onerror="this.style.display='none'"></div>
+        <div class="p-card"><img src="p6.png" alt="p6" onerror="this.style.display='none'"></div>
+    </div>
+</section>
 
- const reader=new FileReader();
- reader.onload=(r)=>{
-   const img=new Image();
-   img.onload=()=>{
-      sourceImg=img;
-      const c=document.getElementById('sourceCanvas');
-      c.width=400;c.height=500;
-      c.getContext('2d').drawImage(img,0,0,400,500);
-      status.textContent="✓ Image Loaded";
-   };
-   img.src=r.target.result;
- };
- reader.readAsDataURL(file);
-};
+<!-- 6, 7: Features & Buy -->
 
-processBtn.onclick=async()=>{
- if(!sourceImg){
-   alert("Upload image first");
-   return;
- }
+        <section class="bottom-actions">
+            <ul class="features-6">
+                <li><i data-lucide="check-circle"></i> 25+ Smart Animations</li>
+                <li><i data-lucide="check-circle"></i> 3 Hours Battery Backup</li>
+                <li><i data-lucide="check-circle"></i> Bluetooth Control</li>
+                <li><i data-lucide="check-circle"></i> Premium Matte Finish</li>
+                <li><i data-lucide="check-circle"></i> Exclusive Tech Features</li>
+            </ul>
 
- const apiKey=document.getElementById('geminiKey').value.trim();
+            <div class="buy-now-box-7" id="buy">
+                <a href="#" class="buy-now-btn-7">Buy Now</a>
+                <p class="slogan-7">Bring your<br>future today</p>
+            </div>
+        </section>
+</main>
 
- 
+    <!-- Details Section -->
+    <section class="details-section" id="details">
+        <h2 style="font-size: 3rem; font-weight: 800; margin-bottom: 20px;">Technical Specs</h2>
+        <p style="color: var(--text-dim); max-width: 600px;">
+            DopsBot features an advanced neural processor and precision-engineered joints for life-like movement. Explore the depth of robotics.
+        </p>
+    </section>
 
- status.textContent="Processing...";
+    <script>
+        
+    // Initialize Lucide Icons
+    lucide.createIcons();
 
- try{
-   const base64=document.getElementById('sourceCanvas')
-     .toDataURL('image/jpeg',0.8)
-     .split(',')[1];
+    // Make the gallery continuously loop by cloning cards once
+    const galleryTrack = document.getElementById('galleryTrack');
+    if (galleryTrack) {
+        const originalCards = Array.from(galleryTrack.children);
+        originalCards.forEach(card => {
+            const clone = card.cloneNode(true);
+            galleryTrack.appendChild(clone);
+        });
+    }
 
-   const res=await fetch(
-   `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-   {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        contents:[{
-          parts:[
-            {inline_data:{mime_type:"image/jpeg",data:base64}},
-            {text:'Return ONLY JSON: {"t":10,"l":10,"w":80,"h":80}'}
-          ]
-        }]
-      })
-   });
+    // Menu toggle
+    const menuToggle = document.getElementById('menuToggle');
+    const menuBackdrop = document.getElementById('menuBackdrop');
+    const sideMenu = document.getElementById('sideMenu');
+    const menuClose = document.getElementById('menuClose');
 
-   const data=await res.json();
+    function openMenu() {
+        sideMenu.classList.add('open');
+        menuBackdrop.classList.add('open');
+        menuToggle.classList.add('is-active');
+        menuToggle.setAttribute('aria-expanded', 'true');
+    }
 
-   if(!res.ok){
-      throw new Error(data?.error?.message || "Gemini request failed");
-   }
+    function closeMenu() {
+        sideMenu.classList.remove('open');
+        menuBackdrop.classList.remove('open');
+        menuToggle.classList.remove('is-active');
+        menuToggle.setAttribute('aria-expanded', 'false');
+    }
 
-   let crop={t:10,l:10,w:80,h:80};
+    if (menuToggle && menuBackdrop && sideMenu && menuClose) {
+        menuToggle.addEventListener('click', () => {
+            const isOpen = sideMenu.classList.contains('open');
+            if (isOpen) {
+                closeMenu();
+            } else {
+                openMenu();
+            }
+        });
+        menuClose.addEventListener('click', closeMenu);
+        menuBackdrop.addEventListener('click', closeMenu);
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeMenu();
+        });
+        sideMenu.querySelectorAll('a').forEach(link => link.addEventListener('click', closeMenu));
+    }
 
-   try{
-      const text=data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      const match=text.match(/\{[\s\S]*\}/);
-      if(match) crop=JSON.parse(match[0]);
-   }catch(e){}
+    // Reveal animations on scroll
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = "1";
+                entry.target.style.transform = "translateY(0)";
+            }
+        });
+    }, { threshold: 0.1 });
 
-   const out=document.getElementById('resultCanvas');
-   out.width=600; out.height=750;
-
-   const ctx=out.getContext('2d');
-
-   const sx=(crop.l/100)*sourceImg.width;
-   const sy=(crop.t/100)*sourceImg.height;
-   const sw=(crop.w/100)*sourceImg.width;
-   const sh=(crop.h/100)*sourceImg.height;
-
-   ctx.fillStyle="#ffffff";
-   ctx.fillRect(0,0,600,750);
-   ctx.drawImage(sourceImg,sx,sy,sw,sh,0,0,600,750);
-
-   status.textContent="✓ Complete";
-
- }catch(err){
-   console.error(err);
-   status.textContent="Error";
-   alert(err.message);
- }
-};
+    document.querySelectorAll('.p-card, .features-6 li').forEach(el => {
+        el.style.opacity = "0";
+        el.style.transform = "translateY(20px)";
+        el.style.transition = "0.8s ease-out";
+        observer.observe(el);
+    });
 </script>
+
 </body>
 </html>
