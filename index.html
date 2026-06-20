@@ -438,7 +438,7 @@
       <div class="brand">Back<span>drop</span></div>
       <div class="tagline">Subject in, studio shot out</div>
     </div>
-    <div class="frame-no" id="frameCounter">FRAME 00/00<br>NANO BANANA 2</div>
+    <div class="frame-no" id="frameCounter">FRAME 00/00<br>FLASH IMAGE</div>
   </header>
 
   <div class="config-banner" id="configBanner">
@@ -495,7 +495,7 @@
         <div class="qty-display" id="qtyDisplay">1</div>
         <button id="qtyPlus" aria-label="Increase quantity">+</button>
       </div>
-      <div class="qty-hint">Each version is generated separately, up to 6 at a time</div>
+      <div class="qty-hint">~$0.039/image · <span id="costEstimate">est. $0.04</span> total</div>
     </div>
   </div>
 
@@ -569,7 +569,7 @@ function clearError(){
 }
 
 function updateFrameCounter(){
-  frameCounter.innerHTML = `FRAME ${String(totalGenerated).padStart(2,'0')}/${String(Math.max(totalGenerated,1)).padStart(2,'0')}<br>NANO BANANA 2`;
+  frameCounter.innerHTML = `FRAME ${String(totalGenerated).padStart(2,'0')}/${String(Math.max(totalGenerated,1)).padStart(2,'0')}<br>FLASH IMAGE`;
 }
 
 function updateGenerateState(){
@@ -664,6 +664,8 @@ customColorText.addEventListener('input', () => {
 function setQty(n){
   quantity = Math.min(6, Math.max(1, n));
   qtyDisplay.textContent = quantity;
+  const est = (quantity * 0.039).toFixed(2);
+  document.getElementById('costEstimate').textContent = `est. $${est}`;
 }
 qtyMinus.addEventListener('click', () => setQty(quantity - 1));
 qtyPlus.addEventListener('click', () => setQty(quantity + 1));
@@ -768,8 +770,7 @@ function renderResults(images){
 
 updateGenerateState();
 updateFrameCounter();
-
-/* ---------- Connection test ---------- */
+setQty(1);
 document.getElementById('testConnBtn').addEventListener('click', async () => {
   clearError();
   const btn = document.getElementById('testConnBtn');
