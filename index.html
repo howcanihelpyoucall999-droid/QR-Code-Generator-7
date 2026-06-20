@@ -141,7 +141,8 @@ async function init() {
 }
 
 async function callAI() {
-    if (!state.sourceImg || !state.geminiKey) return showToast("Upload image first");
+    if (!state.sourceImg) return showToast("Please upload an image first");
+    if (!state.geminiKey) return showToast("Gemini API key not loaded. Fix Supabase or add API key.");
     
     document.getElementById('pbar').style.width = "40%";
     const base64 = document.getElementById('sourceCanvas').toDataURL('image/jpeg', 0.8).split(',')[1];
@@ -204,17 +205,26 @@ function renderA4() {
 // UI HANDLERS
 document.getElementById('dropZone').onclick = () => document.getElementById('fileInput').click();
 document.getElementById('fileInput').onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
     const reader = new FileReader();
     reader.onload = (f) => {
-        state.sourceImg = new Image();
-        state.sourceImg.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+            state.sourceImg = img;
             const c = document.getElementById('sourceCanvas');
-            c.width = 400; c.height = 500;
-            c.getContext('2d').drawImage(state.sourceImg, 0, 0, 400, 500);
+            c.width = 400;
+            c.height = 500;
+            const ctx = c.getContext('2d');
+            ctx.clearRect(0,0,c.width,c.height);
+            ctx.drawImage(img, 0, 0, 400, 500);
+            document.getElementById('dropZone').innerHTML = '<p>✓ Image Loaded</p>';
+            showToast('Image loaded successfully');
         };
-        state.sourceImg.src = f.target.result;
+        img.src = f.target.result;
     };
-    reader.readAsDataURL(e.target.files[0]);
+    reader.readAsDataURL(file);
 };
 
 document.getElementById('processBtn').onclick = callAI;
