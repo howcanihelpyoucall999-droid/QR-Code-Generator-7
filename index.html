@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Backdrop — clean backgrounds, fast</title>
+<title>Backdrop — OpenRouter image editor</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -314,8 +314,8 @@
     display:none;
   }
   .generate-btn.loading .spinner{display:inline-block;}
-  .generate-btn.loading .btn-text::after{content:"Removing background…";}
-  .generate-btn .btn-text::after{content:"Generate";}
+  .generate-btn.loading .btn-text::after{content:"Creating image…";}
+  .generate-btn .btn-text::after{content:"Generate image";}
   @keyframes spin{to{transform:rotate(360deg);}}
 
   /* error banner */
@@ -352,6 +352,22 @@
     font-family:'Space Mono',monospace;
     font-size:12px;
   }
+
+
+  .prompt-input{
+    width:100%;
+    min-height:110px;
+    resize:vertical;
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:12px 12px;
+    font-family:'Inter',sans-serif;
+    font-size:14px;
+    line-height:1.5;
+    background:var(--paper);
+    color:var(--ink);
+  }
+  .prompt-input:focus{outline:2px solid var(--amber);outline-offset:1px;}
 
   /* ---------- Results: contact sheet ---------- */
   .results{
@@ -449,7 +465,7 @@
 </head>
 <body>
 <div style="background:#7f9a6b;color:#fff;text-align:center;padding:6px;font-family:'Space Mono',monospace;font-size:11px;letter-spacing:0.05em;">
-  ✓ HUGGING FACE BUILD — if you don't see this green bar, you're viewing an old cached file
+  ✓ OPENROUTER BUILD — if you don't see this green bar, you're viewing an old cached file
 </div>
 
 <div class="wrap">
@@ -457,13 +473,13 @@
   <header>
     <div>
       <div class="brand">Back<span>drop</span></div>
-      <div class="tagline">Subject in, studio shot out</div>
+      <div class="tagline">Photo in, polished image out</div>
     </div>
-    <div class="frame-no" id="frameCounter">BUILD 2026-06-21-B<br>RMBG · FREE</div>
+    <div class="frame-no" id="frameCounter">BUILD 2026-06-21-C<br>OpenRouter · IMAGE EDIT</div>
   </header>
 
   <div class="config-banner" id="configBanner">
-    Set <code>SUPABASE_FUNCTION_URL</code> and <code>SUPABASE_ANON_KEY</code> near the bottom of this file's script before using.
+    Set <code>OPENROUTER_API_KEY</code> as a Supabase secret. This HTML only calls your Supabase Function.
   </div>
 
   <div class="error-banner" id="errorBanner"></div>
@@ -481,7 +497,7 @@
           <path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
         <div class="upload-title">Tap to upload a photo</div>
-        <div class="upload-sub">or drag one in · JPG or PNG</div>
+        <div class="upload-sub">or drag one in · JPG, PNG, or WEBP</div>
       </div>
       <img id="previewImg" class="preview-img" style="display:none" alt="Uploaded preview" />
       <div id="previewMeta" class="preview-meta" style="display:none"></div>
@@ -489,9 +505,17 @@
   </div>
   <input type="file" id="fileInput" accept="image/png,image/jpeg,image/webp" />
 
+
+  <!-- Prompt -->
+  <div class="ticket">
+    <div class="field-label"><span class="num">1</span> Prompt / edit instruction</div>
+    <textarea class="prompt-input" id="promptInput" rows="4" placeholder="Example: keep the same person, make the photo sharper, clean studio lighting, natural skin, white background, passport style"></textarea>
+    <div class="qty-hint">This is the instruction sent to OpenRouter together with your image.</div>
+  </div>
+
   <!-- Background color -->
   <div class="ticket">
-    <div class="field-label"><span class="num">1</span> Background colour</div>
+    <div class="field-label"><span class="num">2</span> Background colour</div>
     <div class="swatch-row" id="swatchRow">
       <div class="swatch selected" data-color="#FFFFFF" tabindex="0" title="White"></div>
       <div class="swatch" data-color="#111111" tabindex="0" title="Black"></div>
@@ -511,14 +535,14 @@
 
   <!-- Quantity -->
   <div class="ticket">
-    <div class="field-label"><span class="num">2</span> How many versions</div>
+    <div class="field-label"><span class="num">3</span> How many versions</div>
     <div class="qty-row">
       <div class="stepper">
         <button id="qtyMinus" aria-label="Decrease quantity">–</button>
         <div class="qty-display" id="qtyDisplay">1</div>
         <button id="qtyPlus" aria-label="Increase quantity">+</button>
       </div>
-      <div class="qty-hint">Free · background removed once, re-rendered per colour</div>
+      <div class="qty-hint">Free · each version may take a few seconds</div>
     </div>
   </div>
 
@@ -541,12 +565,13 @@
     <div class="results-grid" id="resultsGrid"></div>
   </div>
 
-  <footer>Images are processed by Gemini and may include an invisible SynthID watermark.</footer>
+  <footer>Images are processed by OpenRouter and the result is returned to your browser for download.</footer>
 </div>
+
 
 <script>
 /* =========================================================
-   CONFIGURE THESE TWO VALUES FOR YOUR SUPABASE PROJECT
+   CONFIGURE THESE VALUES FOR YOUR SUPABASE PROJECT
    ========================================================= */
 const SUPABASE_FUNCTION_URL = "https://jwqgrdcsawfcjshptdth.supabase.co/functions/v1/super-function";
 const SUPABASE_ANON_KEY = "sb_publishable_ZK1wxjCTUOhvicZoO_hHGQ_9AchSwSE";
@@ -561,6 +586,7 @@ const swatchRow = document.getElementById('swatchRow');
 const customColorWrap = document.getElementById('customColorWrap');
 const customColorPicker = document.getElementById('customColorPicker');
 const customColorText = document.getElementById('customColorText');
+const promptInput = document.getElementById('promptInput');
 const qtyMinus = document.getElementById('qtyMinus');
 const qtyPlus = document.getElementById('qtyPlus');
 const qtyDisplay = document.getElementById('qtyDisplay');
@@ -577,26 +603,29 @@ let selectedColor = '#FFFFFF';
 let quantity = 1;
 let totalGenerated = 0;
 
-function showConfigWarning(){
+const DEFAULT_PROMPT =
+  'Keep the same person and pose. Improve sharpness, clarity, lighting, and skin tones naturally. Make it look clean, realistic, and high quality.';
+
+function showConfigWarning() {
   if (SUPABASE_FUNCTION_URL.includes('YOUR-PROJECT') || !SUPABASE_FUNCTION_URL) {
     configBanner.classList.add('show');
   }
 }
 showConfigWarning();
 
-function showError(msg){
+function showError(msg) {
   errorBanner.textContent = msg;
   errorBanner.classList.add('show');
 }
-function clearError(){
+function clearError() {
   errorBanner.classList.remove('show');
 }
 
-function updateFrameCounter(){
-  frameCounter.innerHTML = `BUILD 2026-06-21-B · ${totalGenerated} made<br>RMBG · FREE`;
+function updateFrameCounter() {
+  frameCounter.innerHTML = `BUILD 2026-06-21-C · ${totalGenerated} made<br>OpenRouter · IMAGE EDIT`;
 }
 
-function updateGenerateState(){
+function updateGenerateState() {
   generateBtn.disabled = !uploadedFile;
 }
 
@@ -627,7 +656,7 @@ fileInput.addEventListener('change', (e) => {
   if (file) handleFile(file);
 });
 
-function handleFile(file){
+function handleFile(file) {
   clearError();
   if (!file.type.startsWith('image/')) {
     showError('Please upload an image file (JPG, PNG, or WEBP).');
@@ -642,13 +671,12 @@ function handleFile(file){
     const dataUrl = reader.result;
     const base64 = dataUrl.split(',')[1];
     uploadedFile = { base64, mimeType: file.type, name: file.name };
-    cutoutBase64 = null; // new photo — old cutout no longer applies
 
     previewImg.src = dataUrl;
     previewImg.style.display = 'block';
     uploadPrompt.style.display = 'none';
     previewMeta.style.display = 'block';
-    previewMeta.textContent = `${file.name} · ${(file.size/1024/1024).toFixed(1)}MB`;
+    previewMeta.textContent = `${file.name} · ${(file.size / 1024 / 1024).toFixed(1)}MB`;
 
     updateGenerateState();
   };
@@ -667,7 +695,7 @@ swatchRow.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectSwatch(swatch); }
 });
 
-function selectSwatch(swatch){
+function selectSwatch(swatch) {
   document.querySelectorAll('.swatch').forEach(s => s.classList.remove('selected'));
   swatch.classList.add('selected');
   const color = swatch.dataset.color;
@@ -694,44 +722,24 @@ customColorText.addEventListener('input', () => {
 });
 
 /* ---------- Quantity stepper ---------- */
-function setQty(n){
-  quantity = Math.min(6, Math.max(1, n));
+function setQty(n) {
+  quantity = Math.min(3, Math.max(1, n));
   qtyDisplay.textContent = quantity;
 }
 qtyMinus.addEventListener('click', () => setQty(quantity - 1));
 qtyPlus.addEventListener('click', () => setQty(quantity + 1));
 
-/* ---------- Generate ---------- */
-let cutoutBase64 = null; // cached transparent cutout, reused across colors/quantity
-
-function loadImage(src){
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = src;
-  });
-}
-
-async function compositeOnColor(cutoutDataUrl, hexColor){
-  const img = await loadImage(cutoutDataUrl);
-  const canvas = document.createElement('canvas');
-  canvas.width = img.width;
-  canvas.height = img.height;
-  const ctx = canvas.getContext('2d');
-
-  if (hexColor !== 'transparent') {
-    ctx.fillStyle = hexColor;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+function getPromptText() {
+  const prompt = promptInput.value.trim();
+  const bgName = selectedColor === 'transparent' ? 'no background hint' : `background color ${selectedColor}`;
+  if (!prompt) {
+    return `${DEFAULT_PROMPT} Use ${bgName}.`;
   }
-  ctx.drawImage(img, 0, 0);
-
-  return canvas.toDataURL('image/png');
+  return `${prompt} Keep the same subject. Use ${bgName}.`;
 }
 
-async function fetchCutout(){
-  if (cutoutBase64) return cutoutBase64; // already removed this background, reuse it
-
+/* ---------- Generate ---------- */
+async function requestGeneratedImage() {
   const res = await fetch(SUPABASE_FUNCTION_URL, {
     method: 'POST',
     headers: {
@@ -742,20 +750,26 @@ async function fetchCutout(){
     body: JSON.stringify({
       image: uploadedFile.base64,
       mimeType: uploadedFile.mimeType,
+      prompt: getPromptText(),
+      backgroundColor: selectedColor,
+      strength: 0.35,
     }),
   });
 
-  const data = await res.json();
+  let data = {};
+  try {
+    data = await res.json();
+  } catch {
+    // ignore, handled below
+  }
 
   if (!res.ok) {
     throw new Error(data.error || `Request failed (${res.status})`);
   }
-  if (!data.cutout) {
-    throw new Error('No cutout came back. Try again.');
+  if (!data.image) {
+    throw new Error('No image came back. Try again.');
   }
-
-  cutoutBase64 = data.cutout;
-  return cutoutBase64;
+  return data.image;
 }
 
 generateBtn.addEventListener('click', async () => {
@@ -768,33 +782,24 @@ generateBtn.addEventListener('click', async () => {
   renderSkeletons(quantity);
 
   try {
-    const cutout = await fetchCutout();
-    const cutoutDataUrl = `data:image/png;base64,${cutout}`;
-
-    // Compositing onto a color happens entirely in the browser via canvas —
-    // instant, and not subject to any server-side time limit.
     const results = [];
     for (let i = 0; i < quantity; i++) {
-      results.push(await compositeOnColor(cutoutDataUrl, selectedColor));
+      results.push(await requestGeneratedImage());
     }
-
     renderResults(results);
     totalGenerated += results.length;
     updateFrameCounter();
   } catch (err) {
     resultsSection.style.display = totalGenerated > 0 ? 'block' : 'none';
     resultsGrid.querySelectorAll('.skeleton').forEach(s => s.remove());
-    const detail = (err && err.message === 'Failed to fetch')
-      ? 'Failed to fetch — the browser could not reach the function URL at all. This usually means: (a) Verify JWT is still ON for the function, (b) the URL below is wrong, or (c) CORS preflight was blocked. URL used: ' + SUPABASE_FUNCTION_URL
-      : (err.message || 'Something went wrong talking to the server.');
-    showError(detail);
+    showError(err && err.message ? err.message : 'Something went wrong talking to the server.');
   } finally {
     generateBtn.disabled = false;
     generateBtn.classList.remove('loading');
   }
 });
 
-function renderSkeletons(n){
+function renderSkeletons(n) {
   resultsGrid.innerHTML = '';
   resultsCount.textContent = `generating ${n}…`;
   for (let i = 0; i < n; i++) {
@@ -804,7 +809,7 @@ function renderSkeletons(n){
   }
 }
 
-function renderResults(dataUrls){
+function renderResults(dataUrls) {
   resultsGrid.innerHTML = '';
   resultsCount.textContent = `${dataUrls.length} image${dataUrls.length > 1 ? 's' : ''}`;
 
@@ -825,7 +830,7 @@ function renderResults(dataUrls){
     const link = document.createElement('a');
     link.className = 'download-link';
     link.href = dataUrl;
-    link.download = `backdrop-${Date.now()}-${i + 1}.png`;
+    link.download = `openrouter-${Date.now()}-${i + 1}.png`;
     link.textContent = '↓ PNG';
 
     stub.appendChild(label);
@@ -836,10 +841,10 @@ function renderResults(dataUrls){
   });
 }
 
-
 updateGenerateState();
 updateFrameCounter();
 setQty(1);
+
 document.getElementById('testConnBtn').addEventListener('click', async () => {
   clearError();
   const btn = document.getElementById('testConnBtn');
@@ -852,15 +857,15 @@ document.getElementById('testConnBtn').addEventListener('click', async () => {
         'apikey': SUPABASE_ANON_KEY,
       },
     });
-    showError(`Reachable. OPTIONS responded with status ${res.status}. ${res.status === 200 || res.status === 204 ? 'CORS preflight looks fine — try Generate now.' : 'Unexpected status — check Verify JWT setting and that the function name matches exactly.'}`);
+    showError(`Reachable. OPTIONS responded with status ${res.status}.`);
   } catch (err) {
-    showError('Still unreachable at the network level: ' + (err.message || err) + '. Double check the function URL is exactly: ' + SUPABASE_FUNCTION_URL + ' — and that "Verify JWT" is OFF in the function settings.');
+    showError('Still unreachable at the network level: ' + (err.message || err));
   } finally {
     btn.textContent = 'Test connection to function (no image needed)';
   }
 });
-
 </script>
+
 
 </body>
 </html>
