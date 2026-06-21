@@ -201,13 +201,22 @@
     border:1.5px solid var(--ink);
     border-radius:50%;
   }
-  .swatch[data-color="white"]{background:#fff;}
-  .swatch[data-color="pure black"]{background:#111;}
-  .swatch[data-color="studio grey, neutral mid-grey"]{background:#9b9892;}
-  .swatch[data-color="sky blue, soft pastel blue"]{background:#a9cdf2;}
-  .swatch[data-color="sage green, muted soft green"]{background:#a9c19a;}
-  .swatch[data-color="warm beige, cream"]{background:#e8dcc4;}
-  .swatch[data-color="blush pink, soft pastel pink"]{background:#f1c6cf;}
+  .swatch[data-color="#FFFFFF"]{background:#fff;}
+  .swatch[data-color="#111111"]{background:#111;}
+  .swatch[data-color="#9b9892"]{background:#9b9892;}
+  .swatch[data-color="#a9cdf2"]{background:#a9cdf2;}
+  .swatch[data-color="#a9c19a"]{background:#a9c19a;}
+  .swatch[data-color="#e8dcc4"]{background:#e8dcc4;}
+  .swatch[data-color="#f1c6cf"]{background:#f1c6cf;}
+  .swatch[data-color="transparent"]{
+    background-image:
+      linear-gradient(45deg,#ccc 25%,transparent 25%),
+      linear-gradient(-45deg,#ccc 25%,transparent 25%),
+      linear-gradient(45deg,transparent 75%,#ccc 75%),
+      linear-gradient(-45deg,transparent 75%,#ccc 75%);
+    background-size:10px 10px;
+    background-position:0 0, 0 5px, 5px -5px, -5px 0px;
+  }
   .swatch[data-color="custom"]{
     background:conic-gradient(from 180deg,#E8722C,#a9cdf2,#a9c19a,#f1c6cf,#E8722C);
   }
@@ -215,8 +224,17 @@
   .custom-color-input{
     display:none;
     margin-top:4px;
+    align-items:center;
   }
   .custom-color-input.show{display:flex;gap:8px;}
+  input[type=color]{
+    width:44px;height:38px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:2px;
+    background:var(--paper);
+    cursor:pointer;
+  }
   .text-input{
     flex:1;
     border:1px solid var(--line);
@@ -296,7 +314,7 @@
     display:none;
   }
   .generate-btn.loading .spinner{display:inline-block;}
-  .generate-btn.loading .btn-text::after{content:"Developing…";}
+  .generate-btn.loading .btn-text::after{content:"Removing background…";}
   .generate-btn .btn-text::after{content:"Generate";}
   @keyframes spin{to{transform:rotate(360deg);}}
 
@@ -430,6 +448,9 @@
 </style>
 </head>
 <body>
+<div style="background:#7f9a6b;color:#fff;text-align:center;padding:6px;font-family:'Space Mono',monospace;font-size:11px;letter-spacing:0.05em;">
+  ✓ HUGGING FACE BUILD — if you don't see this green bar, you're viewing an old cached file
+</div>
 
 <div class="wrap">
 
@@ -438,7 +459,7 @@
       <div class="brand">Back<span>drop</span></div>
       <div class="tagline">Subject in, studio shot out</div>
     </div>
-    <div class="frame-no" id="frameCounter">FRAME 00/00<br>FLASH IMAGE</div>
+    <div class="frame-no" id="frameCounter">BUILD 2026-06-21-B<br>RMBG · FREE</div>
   </header>
 
   <div class="config-banner" id="configBanner">
@@ -472,17 +493,19 @@
   <div class="ticket">
     <div class="field-label"><span class="num">1</span> Background colour</div>
     <div class="swatch-row" id="swatchRow">
-      <div class="swatch selected" data-color="white" tabindex="0" title="White"></div>
-      <div class="swatch" data-color="pure black" tabindex="0" title="Black"></div>
-      <div class="swatch" data-color="studio grey, neutral mid-grey" tabindex="0" title="Studio grey"></div>
-      <div class="swatch" data-color="sky blue, soft pastel blue" tabindex="0" title="Sky blue"></div>
-      <div class="swatch" data-color="sage green, muted soft green" tabindex="0" title="Sage green"></div>
-      <div class="swatch" data-color="warm beige, cream" tabindex="0" title="Warm beige"></div>
-      <div class="swatch" data-color="blush pink, soft pastel pink" tabindex="0" title="Blush pink"></div>
+      <div class="swatch selected" data-color="#FFFFFF" tabindex="0" title="White"></div>
+      <div class="swatch" data-color="#111111" tabindex="0" title="Black"></div>
+      <div class="swatch" data-color="#9b9892" tabindex="0" title="Studio grey"></div>
+      <div class="swatch" data-color="#a9cdf2" tabindex="0" title="Sky blue"></div>
+      <div class="swatch" data-color="#a9c19a" tabindex="0" title="Sage green"></div>
+      <div class="swatch" data-color="#e8dcc4" tabindex="0" title="Warm beige"></div>
+      <div class="swatch" data-color="#f1c6cf" tabindex="0" title="Blush pink"></div>
+      <div class="swatch" data-color="transparent" tabindex="0" title="Transparent"></div>
       <div class="swatch" data-color="custom" tabindex="0" title="Custom colour"></div>
     </div>
     <div class="custom-color-input" id="customColorWrap">
-      <input type="text" class="text-input" id="customColorText" placeholder="Describe it — e.g. 'forest green' or '#1B4D3E'" />
+      <input type="color" id="customColorPicker" value="#E8722C" />
+      <input type="text" class="text-input" id="customColorText" placeholder="#E8722C" />
     </div>
   </div>
 
@@ -495,7 +518,7 @@
         <div class="qty-display" id="qtyDisplay">1</div>
         <button id="qtyPlus" aria-label="Increase quantity">+</button>
       </div>
-      <div class="qty-hint">~$0.039/image · <span id="costEstimate">est. $0.04</span> total</div>
+      <div class="qty-hint">Free · background removed once, re-rendered per colour</div>
     </div>
   </div>
 
@@ -536,6 +559,7 @@ const previewImg = document.getElementById('previewImg');
 const previewMeta = document.getElementById('previewMeta');
 const swatchRow = document.getElementById('swatchRow');
 const customColorWrap = document.getElementById('customColorWrap');
+const customColorPicker = document.getElementById('customColorPicker');
 const customColorText = document.getElementById('customColorText');
 const qtyMinus = document.getElementById('qtyMinus');
 const qtyPlus = document.getElementById('qtyPlus');
@@ -549,7 +573,7 @@ const configBanner = document.getElementById('configBanner');
 const frameCounter = document.getElementById('frameCounter');
 
 let uploadedFile = null;       // { base64, mimeType, name }
-let selectedColor = 'white';
+let selectedColor = '#FFFFFF';
 let quantity = 1;
 let totalGenerated = 0;
 
@@ -569,7 +593,7 @@ function clearError(){
 }
 
 function updateFrameCounter(){
-  frameCounter.innerHTML = `FRAME ${String(totalGenerated).padStart(2,'0')}/${String(Math.max(totalGenerated,1)).padStart(2,'0')}<br>FLASH IMAGE`;
+  frameCounter.innerHTML = `BUILD 2026-06-21-B · ${totalGenerated} made<br>RMBG · FREE`;
 }
 
 function updateGenerateState(){
@@ -649,23 +673,29 @@ function selectSwatch(swatch){
 
   if (color === 'custom') {
     customColorWrap.classList.add('show');
-    customColorText.focus();
-    selectedColor = customColorText.value.trim() || 'white';
+    selectedColor = customColorPicker.value;
+    customColorText.value = selectedColor;
   } else {
     customColorWrap.classList.remove('show');
     selectedColor = color;
   }
 }
+customColorPicker.addEventListener('input', () => {
+  selectedColor = customColorPicker.value;
+  customColorText.value = selectedColor;
+});
 customColorText.addEventListener('input', () => {
-  selectedColor = customColorText.value.trim() || 'white';
+  const v = customColorText.value.trim();
+  if (/^#[0-9A-Fa-f]{6}$/.test(v)) {
+    selectedColor = v;
+    customColorPicker.value = v;
+  }
 });
 
 /* ---------- Quantity stepper ---------- */
 function setQty(n){
   quantity = Math.min(6, Math.max(1, n));
   qtyDisplay.textContent = quantity;
-  const est = (quantity * 0.039).toFixed(2);
-  document.getElementById('costEstimate').textContent = `est. $${est}`;
 }
 qtyMinus.addEventListener('click', () => setQty(quantity - 1));
 qtyPlus.addEventListener('click', () => setQty(quantity + 1));
