@@ -642,6 +642,7 @@ function handleFile(file){
     const dataUrl = reader.result;
     const base64 = dataUrl.split(',')[1];
     uploadedFile = { base64, mimeType: file.type, name: file.name };
+    cutoutBase64 = null; // new photo — old cutout no longer applies
 
     previewImg.src = dataUrl;
     previewImg.style.display = 'block';
@@ -701,6 +702,62 @@ qtyMinus.addEventListener('click', () => setQty(quantity - 1));
 qtyPlus.addEventListener('click', () => setQty(quantity + 1));
 
 /* ---------- Generate ---------- */
+let cutoutBase64 = null; // cached transparent cutout, reused across colors/quantity
+
+function loadImage(src){
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+async function compositeOnColor(cutoutDataUrl, hexColor){
+  const img = await loadImage(cutoutDataUrl);
+  const canvas = document.createElement('canvas');
+  canvas.width = img.width;
+  canvas.height = img.height;
+  const ctx = canvas.getContext('2d');
+
+  if (hexColor !== 'transparent') {
+    ctx.fillStyle = hexColor;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+  ctx.drawImage(img, 0, 0);
+
+  return canvas.toDataURL('image/png');
+}
+
+async function fetchCutout(){
+  if (cutoutBase64) return cutoutBase64; // already removed this background, reuse it
+
+  const res = await fetch(SUPABASE_FUNCTION_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      'apikey': SUPABASE_ANON_KEY,
+    },
+    body: JSON.stringify({
+      image: uploadedFile.base64,
+      mimeType: uploadedFile.mimeType,
+    }),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.error || `Request failed (${res.status})`);
+  }
+  if (!data.cutout) {
+    throw new Error('No cutout came back. Try again.');
+  }
+
+  cutoutBase64 = data.cutout;
+  return cutoutBase64;
+}
+
 generateBtn.addEventListener('click', async () => {
   if (!uploadedFile) return;
   clearError();
@@ -711,37 +768,19 @@ generateBtn.addEventListener('click', async () => {
   renderSkeletons(quantity);
 
   try {
-    const res = await fetch(SUPABASE_FUNCTION_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        'apikey': SUPABASE_ANON_KEY,
-      },
-      body: JSON.stringify({
-        image: uploadedFile.base64,
-        mimeType: uploadedFile.mimeType,
-        backgroundColor: selectedColor,
-        quantity: quantity,
-      }),
-    });
+    const cutout = await fetchCutout();
+    const cutoutDataUrl = `data:image/png;base64,${cutout}`;
 
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(data.error || `Request failed (${res.status})`);
-    }
-    if (!data.images || data.images.length === 0) {
-      throw new Error('No images came back. Try again.');
+    // Compositing onto a color happens entirely in the browser via canvas —
+    // instant, and not subject to any server-side time limit.
+    const results = [];
+    for (let i = 0; i < quantity; i++) {
+      results.push(await compositeOnColor(cutoutDataUrl, selectedColor));
     }
 
-    renderResults(data.images);
-    totalGenerated += data.images.length;
+    renderResults(results);
+    totalGenerated += results.length;
     updateFrameCounter();
-
-    if (data.errors && data.errors.length > 0) {
-      showError(`${data.images.length} of ${quantity} generated. ${data.errors.length} failed — try again for the rest.`);
-    }
   } catch (err) {
     resultsSection.style.display = totalGenerated > 0 ? 'block' : 'none';
     resultsGrid.querySelectorAll('.skeleton').forEach(s => s.remove());
@@ -765,12 +804,11 @@ function renderSkeletons(n){
   }
 }
 
-function renderResults(images){
+function renderResults(dataUrls){
   resultsGrid.innerHTML = '';
-  resultsCount.textContent = `${images.length} image${images.length > 1 ? 's' : ''}`;
+  resultsCount.textContent = `${dataUrls.length} image${dataUrls.length > 1 ? 's' : ''}`;
 
-  images.forEach((base64, i) => {
-    const dataUrl = `data:image/png;base64,${base64}`;
+  dataUrls.forEach((dataUrl, i) => {
     const card = document.createElement('div');
     card.className = 'result-card';
 
@@ -797,6 +835,7 @@ function renderResults(images){
     resultsGrid.appendChild(card);
   });
 }
+
 
 updateGenerateState();
 updateFrameCounter();
