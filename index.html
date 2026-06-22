@@ -1,871 +1,684 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Backdrop — OpenRouter image editor</title>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Backdrop Studio — Passport & ID Photos</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --paper:#FAF8F3;
-    --ink:#1B1B18;
-    --ink-soft:#5b584f;
-    --amber:#E8722C;
-    --amber-deep:#c25a1c;
-    --sage:#7f9a6b;
-    --line:#D8D3C7;
-    --card:#FFFFFF;
-    --radius:14px;
-  }
-  *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
-  body{
-    background:var(--paper);
-    color:var(--ink);
-    font-family:'Inter',sans-serif;
-    -webkit-font-smoothing:antialiased;
-    min-height:100vh;
-  }
-  ::selection{background:var(--amber);color:#fff;}
+:root{
+  --paper:#FAF8F3; --ink:#1B1B18; --soft:#5b584f; --amber:#E8722C;
+  --amber-d:#c25a1c; --line:#D8D3C7; --card:#fff; --r:13px;
+  --blue:#c8dff5; --green:#c5dab8;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--paper);color:var(--ink);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;}
+.wrap{max-width:700px;margin:0 auto;padding:24px 16px 80px;}
 
-  .wrap{
-    max-width:720px;
-    margin:0 auto;
-    padding:28px 20px 80px;
-  }
+/* ── header ── */
+header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;}
+.brand{font-family:'Archivo Black',sans-serif;font-size:26px;letter-spacing:-.02em;line-height:1;}
+.brand b{color:var(--amber);}
+.tagline{font-size:11px;font-family:'Space Mono',monospace;text-transform:uppercase;letter-spacing:.07em;color:var(--soft);margin-top:4px;}
+.htag{font-family:'Space Mono',monospace;font-size:10px;color:var(--soft);text-align:right;line-height:1.8;}
 
-  /* ---------- Header ---------- */
-  header{
-    display:flex;
-    align-items:flex-start;
-    justify-content:space-between;
-    margin-bottom:34px;
-    gap:12px;
-  }
-  .brand{
-    font-family:'Archivo Black',sans-serif;
-    font-size:28px;
-    letter-spacing:-0.02em;
-    line-height:1;
-  }
-  .brand span{color:var(--amber);}
-  .tagline{
-    font-family:'Space Mono',monospace;
-    font-size:11px;
-    text-transform:uppercase;
-    letter-spacing:0.08em;
-    color:var(--ink-soft);
-    margin-top:6px;
-  }
-  .frame-no{
-    font-family:'Space Mono',monospace;
-    font-size:11px;
-    color:var(--ink-soft);
-    text-align:right;
-    line-height:1.6;
-    white-space:nowrap;
-    margin-top:4px;
-  }
+/* ── upload ── */
+.vf{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:3px;margin-bottom:18px;}
+.vf-in{position:relative;min-height:240px;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px 16px;cursor:pointer;overflow:hidden;background:repeating-linear-gradient(45deg,rgba(0,0,0,.025) 0 2px,transparent 2px 14px);transition:background .15s;}
+.vf-in.over{background-color:#FFF4EA;}
+.c{position:absolute;width:18px;height:18px;border-color:var(--amber);border-style:solid;border-width:0;opacity:.9;}
+.c.tl{top:9px;left:9px;border-top-width:3px;border-left-width:3px;border-radius:3px 0 0 0;}
+.c.tr{top:9px;right:9px;border-top-width:3px;border-right-width:3px;border-radius:0 3px 0 0;}
+.c.bl{bottom:9px;left:9px;border-bottom-width:3px;border-left-width:3px;border-radius:0 0 0 3px;}
+.c.br{bottom:9px;right:9px;border-bottom-width:3px;border-right-width:3px;border-radius:0 0 3px 0;}
+.up-icon{width:38px;height:38px;color:var(--soft);margin-bottom:10px;}
+.up-t{font-weight:600;font-size:15px;margin-bottom:2px;}
+.up-s{font-size:12px;color:var(--soft);}
+#prevImg{max-width:100%;max-height:280px;border-radius:7px;display:block;}
+.pill{position:absolute;bottom:9px;left:50%;transform:translateX(-50%);background:rgba(27,27,24,.8);color:#fff;font-size:10px;font-family:'Space Mono',monospace;padding:4px 11px;border-radius:999px;white-space:nowrap;}
+input[type=file]{display:none;}
 
-  /* ---------- Viewfinder upload zone ---------- */
-  .viewfinder{
-    position:relative;
-    border-radius:var(--radius);
-    background:var(--card);
-    border:1px solid var(--line);
-    padding:3px;
-    margin-bottom:24px;
-  }
-  .viewfinder-inner{
-    position:relative;
-    min-height:280px;
-    border-radius:10px;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    text-align:center;
-    padding:32px 20px;
-    cursor:pointer;
-    overflow:hidden;
-    background:
-      repeating-linear-gradient(45deg, rgba(27,27,24,0.025) 0 2px, transparent 2px 14px);
-    transition:background-color .15s ease;
-  }
-  .viewfinder-inner.drag-over{
-    background-color:#FFF4EA;
-  }
-  .corner{
-    position:absolute;
-    width:22px;
-    height:22px;
-    border-color:var(--amber);
-    border-style:solid;
-    border-width:0;
-    opacity:0.85;
-  }
-  .corner.tl{top:10px;left:10px;border-top-width:3px;border-left-width:3px;border-radius:4px 0 0 0;}
-  .corner.tr{top:10px;right:10px;border-top-width:3px;border-right-width:3px;border-radius:0 4px 0 0;}
-  .corner.bl{bottom:10px;left:10px;border-bottom-width:3px;border-left-width:3px;border-radius:0 0 0 4px;}
-  .corner.br{bottom:10px;right:10px;border-bottom-width:3px;border-right-width:3px;border-radius:0 0 4px 0;}
+/* ── ticket ── */
+.ticket{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:14px;}
+.tlbl{font-family:'Space Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--soft);margin-bottom:10px;display:flex;align-items:center;gap:7px;}
+.tlbl .n{background:var(--ink);color:var(--paper);width:15px;height:15px;border-radius:50%;font-size:9px;display:inline-flex;align-items:center;justify-content:center;}
 
-  .upload-icon{
-    width:44px;height:44px;
-    margin-bottom:14px;
-    color:var(--ink-soft);
-  }
-  .upload-title{
-    font-weight:600;
-    font-size:16px;
-    margin-bottom:4px;
-  }
-  .upload-sub{
-    font-size:13px;
-    color:var(--ink-soft);
-  }
-  .preview-img{
-    max-width:100%;
-    max-height:340px;
-    border-radius:8px;
-    display:block;
-  }
-  .preview-meta{
-    position:absolute;
-    bottom:10px;
-    left:50%;
-    transform:translateX(-50%);
-    background:rgba(27,27,24,0.78);
-    color:#fff;
-    font-family:'Space Mono',monospace;
-    font-size:11px;
-    padding:5px 12px;
-    border-radius:999px;
-    white-space:nowrap;
-  }
-  input[type=file]{display:none;}
+/* ── presets ── */
+.preset-scroll{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.preset-scroll::-webkit-scrollbar{display:none;}
+.pcard{flex:0 0 auto;border:2px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;text-align:center;background:var(--paper);transition:border-color .15s,background .15s;min-width:90px;}
+.pcard.sel{border-color:var(--ink);background:#fff;}
+.pcard .flag{font-size:20px;margin-bottom:4px;}
+.pcard .pname{font-weight:600;font-size:12px;color:var(--ink);}
+.pcard .pdesc{font-size:10px;color:var(--soft);font-family:'Space Mono',monospace;margin-top:2px;}
+.pcard .pviz{width:28px;border:1px solid var(--line);background:#e8e4da;margin:6px auto 0;border-radius:2px;}
+.custom-dims{display:none;gap:8px;margin-top:10px;}
+.custom-dims.show{display:flex;}
+.dim-inp{flex:1;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;font-family:'Space Mono',monospace;background:var(--paper);color:var(--ink);}
+.dim-inp:focus{outline:2px solid var(--amber);outline-offset:1px;}
+.dim-lbl{font-size:11px;color:var(--soft);align-self:center;}
 
-  /* ---------- Ticket / controls ---------- */
-  .ticket{
-    background:var(--card);
-    border:1px solid var(--line);
-    border-radius:var(--radius);
-    padding:22px;
-    margin-bottom:20px;
-  }
-  .ticket + .ticket{margin-top:-4px;}
-  .field-label{
-    font-family:'Space Mono',monospace;
-    font-size:11px;
-    text-transform:uppercase;
-    letter-spacing:0.08em;
-    color:var(--ink-soft);
-    margin-bottom:10px;
-    display:flex;
-    align-items:center;
-    gap:8px;
-  }
-  .field-label .num{
-    background:var(--ink);
-    color:var(--paper);
-    width:16px;height:16px;
-    border-radius:50%;
-    font-size:10px;
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-  }
+/* ── swatches ── */
+.sw-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
+.sw{width:34px;height:34px;border-radius:50%;border:2px solid var(--line);cursor:pointer;position:relative;flex:0 0 auto;transition:transform .12s,border-color .12s;}
+.sw:hover{transform:translateY(-2px);}
+.sw.sel{border-color:var(--ink);}
+.sw.sel::after{content:"";position:absolute;inset:-5px;border:1.5px solid var(--ink);border-radius:50%;}
+.sw[data-c="#FFFFFF"]{background:#fff;}
+.sw[data-c="#111111"]{background:#111;}
+.sw[data-c="#c8dff5"]{background:#c8dff5;}
+.sw[data-c="#FFFFFF-2"]{background:#f5f5f5;outline:1px solid #ccc;outline-offset:-2px;}
+.sw[data-c="#9b9892"]{background:#9b9892;}
+.sw[data-c="#a9cdf2"]{background:#a9cdf2;}
+.sw[data-c="#a9c19a"]{background:#a9c19a;}
+.sw[data-c="#e8dcc4"]{background:#e8dcc4;}
+.sw[data-c="custom"]{background:conic-gradient(from 180deg,#E8722C,#a9cdf2,#a9c19a,#c8dff5,#E8722C);}
+.cust-c{display:none;align-items:center;gap:8px;margin-top:4px;}
+.cust-c.show{display:flex;}
+input[type=color]{width:40px;height:34px;border:1px solid var(--line);border-radius:7px;padding:2px;background:var(--paper);cursor:pointer;}
+.ctxt{flex:1;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px;font-family:'Space Mono',monospace;background:var(--paper);color:var(--ink);}
+.ctxt:focus{outline:2px solid var(--amber);outline-offset:1px;}
 
-  /* color swatches */
-  .swatch-row{
-    display:flex;
-    flex-wrap:wrap;
-    gap:10px;
-    margin-bottom:14px;
-  }
-  .swatch{
-    width:38px;height:38px;
-    border-radius:50%;
-    border:2px solid var(--line);
-    cursor:pointer;
-    position:relative;
-    flex:0 0 auto;
-    transition:transform .12s ease, border-color .12s ease;
-  }
-  .swatch:hover{transform:translateY(-2px);}
-  .swatch.selected{border-color:var(--ink);}
-  .swatch.selected::after{
-    content:"";
-    position:absolute;inset:-6px;
-    border:1.5px solid var(--ink);
-    border-radius:50%;
-  }
-  .swatch[data-color="#FFFFFF"]{background:#fff;}
-  .swatch[data-color="#111111"]{background:#111;}
-  .swatch[data-color="#9b9892"]{background:#9b9892;}
-  .swatch[data-color="#a9cdf2"]{background:#a9cdf2;}
-  .swatch[data-color="#a9c19a"]{background:#a9c19a;}
-  .swatch[data-color="#e8dcc4"]{background:#e8dcc4;}
-  .swatch[data-color="#f1c6cf"]{background:#f1c6cf;}
-  .swatch[data-color="transparent"]{
-    background-image:
-      linear-gradient(45deg,#ccc 25%,transparent 25%),
-      linear-gradient(-45deg,#ccc 25%,transparent 25%),
-      linear-gradient(45deg,transparent 75%,#ccc 75%),
-      linear-gradient(-45deg,transparent 75%,#ccc 75%);
-    background-size:10px 10px;
-    background-position:0 0, 0 5px, 5px -5px, -5px 0px;
-  }
-  .swatch[data-color="custom"]{
-    background:conic-gradient(from 180deg,#E8722C,#a9cdf2,#a9c19a,#f1c6cf,#E8722C);
-  }
+/* ── qty & copies ── */
+.qty-row{display:flex;align-items:center;gap:12px;}
+.stepper{display:flex;align-items:center;border:1px solid var(--line);border-radius:9px;overflow:hidden;}
+.stepper button{width:36px;height:36px;border:none;background:var(--paper);font-size:17px;cursor:pointer;color:var(--ink);}
+.stepper button:active{background:#efe9dc;}
+.qv{width:38px;text-align:center;font-family:'Space Mono',monospace;font-size:14px;font-weight:700;}
+.qhint{font-size:11px;color:var(--soft);line-height:1.5;}
+.qhint span{font-family:'Space Mono',monospace;}
 
-  .custom-color-input{
-    display:none;
-    margin-top:4px;
-    align-items:center;
-  }
-  .custom-color-input.show{display:flex;gap:8px;}
-  input[type=color]{
-    width:44px;height:38px;
-    border:1px solid var(--line);
-    border-radius:8px;
-    padding:2px;
-    background:var(--paper);
-    cursor:pointer;
-  }
-  .text-input{
-    flex:1;
-    border:1px solid var(--line);
-    border-radius:8px;
-    padding:10px 12px;
-    font-family:'Inter',sans-serif;
-    font-size:14px;
-    background:var(--paper);
-    color:var(--ink);
-  }
-  .text-input:focus{outline:2px solid var(--amber);outline-offset:1px;}
+/* ── generate ── */
+.gen-btn{width:100%;padding:14px;border:none;border-radius:var(--r);background:var(--ink);color:var(--paper);font-family:'Inter',sans-serif;font-weight:600;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;transition:background .15s,transform .08s;margin-bottom:10px;}
+.gen-btn:hover:not(:disabled){background:var(--amber-d);}
+.gen-btn:disabled{background:#cbc6b8;cursor:not-allowed;}
+.gen-btn .sp{width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:none;}
+.gen-btn.loading .sp{display:inline-block;}
+.gen-btn.loading .lt::after{content:"Processing photo…";}
+.gen-btn .lt::after{content:"Generate Photo Sheet";}
+@keyframes spin{to{transform:rotate(360deg);}}
 
-  /* quantity stepper */
-  .qty-row{
-    display:flex;
-    align-items:center;
-    gap:16px;
-  }
-  .stepper{
-    display:flex;
-    align-items:center;
-    border:1px solid var(--line);
-    border-radius:10px;
-    overflow:hidden;
-  }
-  .stepper button{
-    width:38px;height:38px;
-    border:none;
-    background:var(--paper);
-    font-size:18px;
-    cursor:pointer;
-    color:var(--ink);
-  }
-  .stepper button:active{background:#efe9dc;}
-  .stepper .qty-display{
-    width:42px;
-    text-align:center;
-    font-family:'Space Mono',monospace;
-    font-size:15px;
-    font-weight:700;
-  }
-  .qty-hint{
-    font-size:12px;
-    color:var(--ink-soft);
-  }
+/* ── progress ── */
+.prog{display:none;margin-bottom:14px;}
+.prog.show{display:block;}
+.prog-t{height:4px;background:var(--line);border-radius:999px;overflow:hidden;margin-bottom:5px;}
+.prog-f{height:100%;background:var(--amber);width:0%;transition:width .4s;}
+.prog-l{font-size:11px;font-family:'Space Mono',monospace;color:var(--soft);text-align:center;}
 
-  /* generate button */
-  .generate-btn{
-    width:100%;
-    padding:16px;
-    border:none;
-    border-radius:var(--radius);
-    background:var(--ink);
-    color:var(--paper);
-    font-family:'Inter',sans-serif;
-    font-weight:600;
-    font-size:15px;
-    cursor:pointer;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    gap:10px;
-    transition:background-color .15s ease, transform .08s ease;
-  }
-  .generate-btn:hover:not(:disabled){background:var(--amber-deep);}
-  .generate-btn:active:not(:disabled){transform:scale(0.99);}
-  .generate-btn:disabled{
-    background:#cbc6b8;
-    cursor:not-allowed;
-  }
-  .generate-btn .spinner{
-    width:16px;height:16px;
-    border:2px solid rgba(250,248,243,0.35);
-    border-top-color:var(--paper);
-    border-radius:50%;
-    animation:spin .7s linear infinite;
-    display:none;
-  }
-  .generate-btn.loading .spinner{display:inline-block;}
-  .generate-btn.loading .btn-text::after{content:"Creating image…";}
-  .generate-btn .btn-text::after{content:"Generate image";}
-  @keyframes spin{to{transform:rotate(360deg);}}
+/* ── error ── */
+.err{display:none;background:#fbeae3;border:1px solid #e8b79a;color:#8a3d16;border-radius:9px;padding:10px 13px;font-size:12px;margin-bottom:14px;line-height:1.5;}
+.err.show{display:block;}
 
-  /* error banner */
-  .error-banner{
-    display:none;
-    background:#fbeae3;
-    border:1px solid #e8b79a;
-    color:#8a3d16;
-    border-radius:10px;
-    padding:12px 14px;
-    font-size:13px;
-    margin-bottom:16px;
-    line-height:1.5;
-  }
-  .error-banner.show{display:block;}
+/* ── A4 result ── */
+.result-wrap{margin-top:24px;display:none;}
+.result-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;padding-bottom:8px;border-bottom:1px dashed var(--line);}
+.result-title{font-family:'Space Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--soft);}
+.result-info{font-family:'Space Mono',monospace;font-size:10px;color:var(--amber-d);}
 
-  /* config notice */
-  .config-banner{
-    display:none;
-    background:#fdf6e3;
-    border:1px solid #e8d9a0;
-    color:#7a5d10;
-    border-radius:10px;
-    padding:12px 14px;
-    font-size:13px;
-    margin-bottom:16px;
-    line-height:1.5;
-  }
-  .config-banner.show{display:block;}
-  .config-banner code{
-    background:rgba(0,0,0,0.06);
-    padding:1px 5px;
-    border-radius:4px;
-    font-family:'Space Mono',monospace;
-    font-size:12px;
-  }
+/* A4 paper display — always A4 proportion */
+.a4-paper{
+  width:100%;
+  aspect-ratio:210/297;
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:4px;
+  box-shadow:0 4px 20px rgba(0,0,0,.08),0 1px 4px rgba(0,0,0,.04);
+  overflow:hidden;
+  position:relative;
+}
+.a4-paper canvas{
+  width:100%;
+  height:100%;
+  display:block;
+}
 
+/* download buttons */
+.dl-row{display:flex;gap:8px;margin-top:12px;}
+.dl-btn{flex:1;padding:11px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);font-family:'Inter',sans-serif;font-weight:600;font-size:12px;cursor:pointer;text-align:center;transition:background .12s;}
+.dl-btn:hover{background:#f0ece2;}
+.dl-btn.primary{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+.dl-btn.primary:hover{background:var(--amber-d);border-color:var(--amber-d);}
 
-  .prompt-input{
-    width:100%;
-    min-height:110px;
-    resize:vertical;
-    border:1px solid var(--line);
-    border-radius:10px;
-    padding:12px 12px;
-    font-family:'Inter',sans-serif;
-    font-size:14px;
-    line-height:1.5;
-    background:var(--paper);
-    color:var(--ink);
-  }
-  .prompt-input:focus{outline:2px solid var(--amber);outline-offset:1px;}
-
-  /* ---------- Results: contact sheet ---------- */
-  .results{
-    margin-top:32px;
-  }
-  .results-head{
-    display:flex;
-    align-items:baseline;
-    justify-content:space-between;
-    margin-bottom:14px;
-    padding-bottom:10px;
-    border-bottom:1px dashed var(--line);
-  }
-  .results-title{
-    font-family:'Space Mono',monospace;
-    font-size:12px;
-    text-transform:uppercase;
-    letter-spacing:0.08em;
-    color:var(--ink-soft);
-  }
-  .results-grid{
-    display:grid;
-    grid-template-columns:repeat(2,1fr);
-    gap:14px;
-  }
-  .result-card{
-    background:var(--card);
-    border:1px solid var(--line);
-    border-radius:10px;
-    overflow:hidden;
-    position:relative;
-  }
-  .result-card img{
-    width:100%;
-    display:block;
-    aspect-ratio:1/1;
-    object-fit:cover;
-    background:#f3f0e8;
-  }
-  .result-stub{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding:9px 11px;
-    border-top:1px dashed var(--line);
-    font-family:'Space Mono',monospace;
-    font-size:11px;
-    color:var(--ink-soft);
-  }
-  .download-link{
-    color:var(--amber-deep);
-    text-decoration:none;
-    font-weight:700;
-    display:flex;
-    align-items:center;
-    gap:4px;
-  }
-  .download-link:hover{text-decoration:underline;}
-  .skeleton{
-    aspect-ratio:1/1;
-    background:linear-gradient(100deg,#efebe1 30%,#f7f4ec 50%,#efebe1 70%);
-    background-size:200% 100%;
-    animation:shimmer 1.3s infinite;
-    border-radius:10px;
-  }
-  @keyframes shimmer{
-    0%{background-position:200% 0;}
-    100%{background-position:-200% 0;}
-  }
-
-  footer{
-    text-align:center;
-    margin-top:48px;
-    font-family:'Space Mono',monospace;
-    font-size:11px;
-    color:var(--ink-soft);
-  }
-
-  @media (max-width:480px){
-    .results-grid{grid-template-columns:1fr;}
-    .brand{font-size:24px;}
-  }
-
-  /* reduced motion */
-  @media (prefers-reduced-motion: reduce){
-    .spinner,.skeleton{animation:none;}
-  }
-
-  /* focus visibility */
-  a:focus-visible, button:focus-visible, .swatch:focus-visible, .viewfinder-inner:focus-visible{
-    outline:2px solid var(--amber);
-    outline-offset:2px;
-  }
+footer{text-align:center;margin-top:40px;font-family:'Space Mono',monospace;font-size:10px;color:var(--soft);}
+@media(max-width:440px){.brand{font-size:22px;}}
 </style>
 </head>
 <body>
-<div style="background:#7f9a6b;color:#fff;text-align:center;padding:6px;font-family:'Space Mono',monospace;font-size:11px;letter-spacing:0.05em;">
-  ✓ OPENROUTER BUILD — if you don't see this green bar, you're viewing an old cached file
-</div>
-
 <div class="wrap">
 
-  <header>
-    <div>
-      <div class="brand">Back<span>drop</span></div>
-      <div class="tagline">Photo in, polished image out</div>
-    </div>
-    <div class="frame-no" id="frameCounter">BUILD 2026-06-21-C<br>OpenRouter · IMAGE EDIT</div>
-  </header>
-
-  <div class="config-banner" id="configBanner">
-    Set <code>OPENROUTER_API_KEY</code> as a Supabase secret. This HTML only calls your Supabase Function.
+<header>
+  <div>
+    <div class="brand">Back<b>drop</b> Studio</div>
+    <div class="tagline">Professional Passport & ID Photos</div>
   </div>
+  <div class="htag">LUMEN · GEMINI<br>AI STUDIO</div>
+</header>
 
-  <div class="error-banner" id="errorBanner"></div>
+<div class="err" id="errBox"></div>
 
-  <!-- Upload -->
-  <div class="viewfinder">
-    <div class="viewfinder-inner" id="dropZone" tabindex="0" role="button" aria-label="Upload an image">
-      <span class="corner tl"></span>
-      <span class="corner tr"></span>
-      <span class="corner bl"></span>
-      <span class="corner br"></span>
-      <div id="uploadPrompt">
-        <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M12 16V4M12 4l-4 4M12 4l4 4" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <div class="upload-title">Tap to upload a photo</div>
-        <div class="upload-sub">or drag one in · JPG, PNG, or WEBP</div>
-      </div>
-      <img id="previewImg" class="preview-img" style="display:none" alt="Uploaded preview" />
-      <div id="previewMeta" class="preview-meta" style="display:none"></div>
+<!-- Upload -->
+<div class="vf">
+  <div class="vf-in" id="dropZone" tabindex="0" role="button" aria-label="Upload photo">
+    <span class="c tl"></span><span class="c tr"></span>
+    <span class="c bl"></span><span class="c br"></span>
+    <div id="upPrompt">
+      <svg class="up-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M12 16V4M12 4l-4 4M12 4l4 4" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div class="up-t">Upload your photo</div>
+      <div class="up-s">JPG or PNG · max 10MB · clear face, good lighting</div>
     </div>
+    <img id="prevImg" style="display:none" alt="Preview"/>
+    <div class="pill" id="pillTxt" style="display:none"></div>
   </div>
-  <input type="file" id="fileInput" accept="image/png,image/jpeg,image/webp" />
+</div>
+<input type="file" id="fileInp" accept="image/png,image/jpeg,image/webp"/>
 
-
-  <!-- Prompt -->
-  <div class="ticket">
-    <div class="field-label"><span class="num">1</span> Prompt / edit instruction</div>
-    <textarea class="prompt-input" id="promptInput" rows="4" placeholder="Example: keep the same person, make the photo sharper, clean studio lighting, natural skin, white background, passport style"></textarea>
-    <div class="qty-hint">This is the instruction sent to OpenRouter together with your image.</div>
+<!-- Step 1: Photo type -->
+<div class="ticket">
+  <div class="tlbl"><span class="n">1</span> Photo type & size</div>
+  <div class="preset-scroll" id="presetRow"></div>
+  <div class="custom-dims" id="customDims">
+    <input class="dim-inp" id="custW" type="number" placeholder="Width" min="10" max="200"/>
+    <span class="dim-lbl">×</span>
+    <input class="dim-inp" id="custH" type="number" placeholder="Height" min="10" max="200"/>
+    <span class="dim-lbl">mm</span>
   </div>
-
-  <!-- Background color -->
-  <div class="ticket">
-    <div class="field-label"><span class="num">2</span> Background colour</div>
-    <div class="swatch-row" id="swatchRow">
-      <div class="swatch selected" data-color="#FFFFFF" tabindex="0" title="White"></div>
-      <div class="swatch" data-color="#111111" tabindex="0" title="Black"></div>
-      <div class="swatch" data-color="#9b9892" tabindex="0" title="Studio grey"></div>
-      <div class="swatch" data-color="#a9cdf2" tabindex="0" title="Sky blue"></div>
-      <div class="swatch" data-color="#a9c19a" tabindex="0" title="Sage green"></div>
-      <div class="swatch" data-color="#e8dcc4" tabindex="0" title="Warm beige"></div>
-      <div class="swatch" data-color="#f1c6cf" tabindex="0" title="Blush pink"></div>
-      <div class="swatch" data-color="transparent" tabindex="0" title="Transparent"></div>
-      <div class="swatch" data-color="custom" tabindex="0" title="Custom colour"></div>
-    </div>
-    <div class="custom-color-input" id="customColorWrap">
-      <input type="color" id="customColorPicker" value="#E8722C" />
-      <input type="text" class="text-input" id="customColorText" placeholder="#E8722C" />
-    </div>
-  </div>
-
-  <!-- Quantity -->
-  <div class="ticket">
-    <div class="field-label"><span class="num">3</span> How many versions</div>
-    <div class="qty-row">
-      <div class="stepper">
-        <button id="qtyMinus" aria-label="Decrease quantity">–</button>
-        <div class="qty-display" id="qtyDisplay">1</div>
-        <button id="qtyPlus" aria-label="Increase quantity">+</button>
-      </div>
-      <div class="qty-hint">Free · each version may take a few seconds</div>
-    </div>
-  </div>
-
-  <!-- Generate -->
-  <button class="generate-btn" id="generateBtn" disabled>
-    <span class="spinner"></span>
-    <span class="btn-text"></span>
-  </button>
-
-  <button id="testConnBtn" style="width:100%;margin-top:10px;padding:12px;border:1px dashed var(--line);border-radius:10px;background:transparent;color:var(--ink-soft);font-family:'Space Mono',monospace;font-size:12px;cursor:pointer;">
-    Test connection to function (no image needed)
-  </button>
-
-  <!-- Results -->
-  <div class="results" id="resultsSection" style="display:none">
-    <div class="results-head">
-      <div class="results-title">Contact sheet</div>
-      <div class="results-title" id="resultsCount"></div>
-    </div>
-    <div class="results-grid" id="resultsGrid"></div>
-  </div>
-
-  <footer>Images are processed by OpenRouter and the result is returned to your browser for download.</footer>
 </div>
 
+<!-- Step 2: Background -->
+<div class="ticket">
+  <div class="tlbl"><span class="n">2</span> Background colour</div>
+  <div class="sw-row">
+    <div class="sw sel" data-c="#FFFFFF" title="White"></div>
+    <div class="sw" data-c="#c8dff5" title="Passport blue (BD)"></div>
+    <div class="sw" data-c="#111111" title="Black"></div>
+    <div class="sw" data-c="#9b9892" title="Studio grey"></div>
+    <div class="sw" data-c="#a9cdf2" title="Sky blue"></div>
+    <div class="sw" data-c="#a9c19a" title="Sage green"></div>
+    <div class="sw" data-c="#e8dcc4" title="Warm beige"></div>
+    <div class="sw" data-c="custom" title="Custom colour"></div>
+  </div>
+  <div class="cust-c" id="custCRow">
+    <input type="color" id="cpick" value="#E8722C"/>
+    <input type="text" class="ctxt" id="ctxt" placeholder="#E8722C"/>
+  </div>
+</div>
+
+<!-- Step 3: Copies -->
+<div class="ticket">
+  <div class="tlbl"><span class="n">3</span> Number of copies on A4 sheet</div>
+  <div class="qty-row">
+    <div class="stepper">
+      <button id="qMinus">–</button>
+      <div class="qv" id="qVal">4</div>
+      <button id="qPlus">+</button>
+    </div>
+    <div class="qhint" id="qhint">
+      4 copies arranged on A4<br>
+      <span id="fitInfo"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Generate -->
+<button class="gen-btn" id="genBtn" disabled>
+  <span class="sp"></span><span class="lt"></span>
+</button>
+<div class="prog" id="progWrap">
+  <div class="prog-t"><div class="prog-f" id="progF"></div></div>
+  <div class="prog-l" id="progL">Sending to AI…</div>
+</div>
+
+<!-- A4 Result -->
+<div class="result-wrap" id="resultWrap">
+  <div class="result-head">
+    <div class="result-title">A4 Print Sheet</div>
+    <div class="result-info" id="resultInfo"></div>
+  </div>
+  <div class="a4-paper">
+    <canvas id="a4Canvas"></canvas>
+  </div>
+  <div class="dl-row">
+    <button class="dl-btn primary" id="dlA4">↓ Download A4 Sheet</button>
+    <button class="dl-btn" id="dlSingle">↓ Single Photo</button>
+  </div>
+</div>
+
+<footer>Powered by Lumen API · Gemini image AI · Photos processed privately in your browser</footer>
+</div>
 
 <script>
-/* =========================================================
-   CONFIGURE THESE VALUES FOR YOUR SUPABASE PROJECT
-   ========================================================= */
-const SUPABASE_FUNCTION_URL = "https://jwqgrdcsawfcjshptdth.supabase.co/functions/v1/super-function";
-const SUPABASE_ANON_KEY = "sb_publishable_ZK1wxjCTUOhvicZoO_hHGQ_9AchSwSE";
-/* ========================================================= */
+/* ════════════════════════════════════════
+   CONFIG
+════════════════════════════════════════ */
+const LUMEN_URL  = 'https://goby7.lovable.app/api/public/v1/edit';
+const LUMEN_KEY  = 'lvi_ba125c7d98dc65f3cb7cbc605dfbeda80d05350ee23b28e43e242bfaeb7663b1';
+const LUMEN_MODEL = 'google/gemini-3.1-flash-image-preview';
 
-const dropZone = document.getElementById('dropZone');
-const fileInput = document.getElementById('fileInput');
-const uploadPrompt = document.getElementById('uploadPrompt');
-const previewImg = document.getElementById('previewImg');
-const previewMeta = document.getElementById('previewMeta');
-const swatchRow = document.getElementById('swatchRow');
-const customColorWrap = document.getElementById('customColorWrap');
-const customColorPicker = document.getElementById('customColorPicker');
-const customColorText = document.getElementById('customColorText');
-const promptInput = document.getElementById('promptInput');
-const qtyMinus = document.getElementById('qtyMinus');
-const qtyPlus = document.getElementById('qtyPlus');
-const qtyDisplay = document.getElementById('qtyDisplay');
-const generateBtn = document.getElementById('generateBtn');
-const resultsSection = document.getElementById('resultsSection');
-const resultsGrid = document.getElementById('resultsGrid');
-const resultsCount = document.getElementById('resultsCount');
-const errorBanner = document.getElementById('errorBanner');
-const configBanner = document.getElementById('configBanner');
-const frameCounter = document.getElementById('frameCounter');
+/* ════════════════════════════════════════
+   PHOTO PRESETS
+════════════════════════════════════════ */
+const PRESETS = [
+  { id:'bd',   flag:'🇧🇩', name:'BD Passport',  w:35, h:45, note:'NID / Passport' },
+  { id:'us',   flag:'🇺🇸', name:'US Passport',   w:51, h:51, note:'2×2 inch'       },
+  { id:'uk',   flag:'🇬🇧', name:'UK / EU',       w:35, h:45, note:'Schengen visa'  },
+  { id:'mini', flag:'📷',  name:'Mini / School', w:25, h:30, note:'School ID card'  },
+  { id:'sq',   flag:'🪪',  name:'Square ID',     w:35, h:35, note:'Square format'   },
+  { id:'cust', flag:'✏️',  name:'Custom',        w:null, h:null, note:'Set own size' },
+];
 
-let uploadedFile = null;       // { base64, mimeType, name }
-let selectedColor = '#FFFFFF';
-let quantity = 1;
-let totalGenerated = 0;
+/* ════════════════════════════════════════
+   STATE
+════════════════════════════════════════ */
+let uploadedDataUrl  = null;
+let selectedPreset   = PRESETS[0];
+let selectedColor    = '#FFFFFF';
+let quantity         = 4;
+let generatedDataUrl = null; // cached AI result
 
-const DEFAULT_PROMPT =
-  'Keep the same person and pose. Improve sharpness, clarity, lighting, and skin tones naturally. Make it look clean, realistic, and high quality.';
+/* ════════════════════════════════════════
+   ELEMENTS
+════════════════════════════════════════ */
+const dropZone  = document.getElementById('dropZone');
+const fileInp   = document.getElementById('fileInp');
+const upPrompt  = document.getElementById('upPrompt');
+const prevImg   = document.getElementById('prevImg');
+const pillTxt   = document.getElementById('pillTxt');
+const errBox    = document.getElementById('errBox');
+const genBtn    = document.getElementById('genBtn');
+const progWrap  = document.getElementById('progWrap');
+const progF     = document.getElementById('progF');
+const progL     = document.getElementById('progL');
+const resultWrap = document.getElementById('resultWrap');
+const resultInfo = document.getElementById('resultInfo');
+const a4Canvas  = document.getElementById('a4Canvas');
+const fitInfo   = document.getElementById('fitInfo');
 
-function showConfigWarning() {
-  if (SUPABASE_FUNCTION_URL.includes('YOUR-PROJECT') || !SUPABASE_FUNCTION_URL) {
-    configBanner.classList.add('show');
+/* ════════════════════════════════════════
+   HELPERS
+════════════════════════════════════════ */
+const showErr  = m => { errBox.textContent = m; errBox.classList.add('show'); };
+const clearErr = ()  => errBox.classList.remove('show');
+
+function currentPresetDims() {
+  if (selectedPreset.id === 'cust') {
+    const w = parseFloat(document.getElementById('custW').value) || 35;
+    const h = parseFloat(document.getElementById('custH').value) || 45;
+    return { w, h };
   }
-}
-showConfigWarning();
-
-function showError(msg) {
-  errorBanner.textContent = msg;
-  errorBanner.classList.add('show');
-}
-function clearError() {
-  errorBanner.classList.remove('show');
+  return { w: selectedPreset.w, h: selectedPreset.h };
 }
 
-function updateFrameCounter() {
-  frameCounter.innerHTML = `BUILD 2026-06-21-C · ${totalGenerated} made<br>OpenRouter · IMAGE EDIT`;
+const COLOR_NAMES = {
+  '#FFFFFF':'clean white', '#111111':'pure black', '#c8dff5':'light passport blue',
+  '#9b9892':'neutral studio grey', '#a9cdf2':'soft sky blue',
+  '#a9c19a':'sage green', '#e8dcc4':'warm cream beige',
+};
+
+function colorDesc(hex) {
+  return COLOR_NAMES[hex] || hex;
 }
 
-function updateGenerateState() {
-  generateBtn.disabled = !uploadedFile;
+/* ════════════════════════════════════════
+   A4 CANVAS LAYOUT
+════════════════════════════════════════ */
+// Internal canvas at 150 DPI A4
+const MM2PX   = 150 / 25.4; // 5.906 px/mm
+const A4_W_PX = Math.round(210 * MM2PX); // 1240
+const A4_H_PX = Math.round(297 * MM2PX); // 1754
+
+function calcLayout(wMM, hMM) {
+  const photoW  = Math.round(wMM * MM2PX);
+  const photoH  = Math.round(hMM * MM2PX);
+  const margin  = Math.round(10 * MM2PX); // 10mm margin
+  const gap     = Math.round(4  * MM2PX); // 4mm gap
+
+  const availW  = A4_W_PX - 2 * margin;
+  const perRow  = Math.max(1, Math.floor((availW + gap) / (photoW + gap)));
+
+  const availH  = A4_H_PX - 2 * margin;
+  const perCol  = Math.max(1, Math.floor((availH + gap) / (photoH + gap)));
+
+  // Center the grid horizontally
+  const gridW   = perRow * photoW + (perRow - 1) * gap;
+  const startX  = Math.round((A4_W_PX - gridW) / 2);
+  const startY  = margin;
+
+  return { photoW, photoH, gap, perRow, perCol, startX, startY, max: perRow * perCol };
 }
 
-/* ---------- File handling ---------- */
-dropZone.addEventListener('click', () => fileInput.click());
-dropZone.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }
-});
+function updateFitInfo() {
+  const { w, h } = currentPresetDims();
+  if (!w || !h) return;
+  const lo = calcLayout(w, h);
+  fitInfo.textContent = `max ${lo.max} per A4 sheet`;
+  quantity = Math.min(quantity, lo.max);
+  document.getElementById('qVal').textContent = quantity;
+}
 
-['dragenter','dragover'].forEach(evt => {
-  dropZone.addEventListener(evt, (e) => {
-    e.preventDefault();
-    dropZone.classList.add('drag-over');
+function loadImgAsync(src) {
+  return new Promise((res, rej) => {
+    const i = new Image();
+    i.onload = () => res(i);
+    i.onerror = rej;
+    i.src = src;
   });
+}
+
+async function renderA4(photoDataUrl) {
+  const { w, h } = currentPresetDims();
+  const lo = calcLayout(w, h);
+
+  // Set canvas resolution
+  a4Canvas.width  = A4_W_PX;
+  a4Canvas.height = A4_H_PX;
+
+  const ctx = a4Canvas.getContext('2d');
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, A4_W_PX, A4_H_PX);
+
+  // Load and crop photo to correct ratio
+  const img = await loadImgAsync(photoDataUrl);
+  const targetRatio = w / h;
+  const srcRatio    = img.width / img.height;
+
+  let sx, sy, sw, sh;
+  if (srcRatio > targetRatio) {
+    // Image wider → crop sides
+    sh = img.height;
+    sw = sh * targetRatio;
+    sx = (img.width - sw) / 2;
+    sy = 0;
+  } else {
+    // Image taller → crop vertically, keep head (20% from top)
+    sw = img.width;
+    sh = sw / targetRatio;
+    sx = 0;
+    sy = Math.max(0, (img.height - sh) * 0.2);
+  }
+
+  // Draw copies
+  const count = Math.min(quantity, lo.max);
+  for (let i = 0; i < count; i++) {
+    const col = i % lo.perRow;
+    const row = Math.floor(i / lo.perRow);
+    const x   = lo.startX + col * (lo.photoW + lo.gap);
+    const y   = lo.startY + row * (lo.photoH + lo.gap);
+    ctx.drawImage(img, sx, sy, sw, sh, x, y, lo.photoW, lo.photoH);
+  }
+
+  resultInfo.textContent =
+    `${count} × ${w}×${h}mm · 150 DPI · A4`;
+  resultWrap.style.display = 'block';
+  resultWrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+/* ════════════════════════════════════════
+   PROMPT BUILDER
+════════════════════════════════════════ */
+function buildPrompt(wMM, hMM, hexColor) {
+  const bg   = colorDesc(hexColor);
+  const ratio = `${wMM}:${hMM}`;
+  return `Professional passport and ID photo studio editing task.
+
+PHOTO FORMAT:
+- Target aspect ratio: ${ratio} (${wMM}×${hMM}mm official format)
+- Reframe and crop so the subject's face occupies 70–80% of the frame height
+- Center the face horizontally; eyes should fall in the upper third of the image
+- Top of head near top of frame; chin in lower third
+- Shoulders visible at bottom if space allows
+
+BACKGROUND:
+- Remove the existing background with precision — clean edges especially around hair
+- Replace with a perfectly flat, matte, solid ${bg} (${hexColor}) background
+- Absolutely no shadows, gradients, reflections, or any texture on the background — uniform flat colour only
+
+PHOTO ENHANCEMENT:
+- Sharpen the image for maximum professional clarity
+- Correct and balance lighting so it looks like professional studio photography
+- Fix any overexposure, underexposure, or harsh shadows naturally
+- Ensure accurate, natural skin tones — no colour cast
+- Overall quality improvement while keeping 100% photographic realism
+
+CRITICAL — MUST LOOK LIKE A REAL PHOTOGRAPH:
+- Output MUST look like a professional studio photograph, absolutely NOT an AI-generated image
+- Preserve every natural facial detail: skin texture, pores, fine lines, natural imperfections — do NOT smooth or alter
+- Keep the person's exact face unchanged — no beautification, no slimming, no feature alteration
+- Preserve natural hair texture in full detail — individual strands should be visible
+- Keep clothing exactly as seen at shoulder and collar level
+- The edge between subject and background must be clean and natural — not a cut-out effect
+- Natural, subtle shadow under chin if appropriate for realism
+
+OUTPUT:
+- High-definition, sharp, professional quality suitable for official government documents
+- No watermarks, borders, text, labels, or decorative elements whatsoever`;
+}
+
+/* ════════════════════════════════════════
+   UPLOAD
+════════════════════════════════════════ */
+dropZone.addEventListener('click', () => fileInp.click());
+dropZone.addEventListener('keydown', e => {
+  if (e.key==='Enter'||e.key===' '){ e.preventDefault(); fileInp.click(); }
 });
-['dragleave','drop'].forEach(evt => {
-  dropZone.addEventListener(evt, (e) => {
-    e.preventDefault();
-    dropZone.classList.remove('drag-over');
-  });
-});
-dropZone.addEventListener('drop', (e) => {
-  const file = e.dataTransfer.files[0];
-  if (file) handleFile(file);
-});
-fileInput.addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (file) handleFile(file);
-});
+['dragenter','dragover'].forEach(ev =>
+  dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.add('over'); })
+);
+['dragleave','drop'].forEach(ev =>
+  dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.remove('over'); })
+);
+dropZone.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if(f) handleFile(f); });
+fileInp.addEventListener('change', e => { const f = e.target.files[0]; if(f) handleFile(f); });
 
 function handleFile(file) {
-  clearError();
-  if (!file.type.startsWith('image/')) {
-    showError('Please upload an image file (JPG, PNG, or WEBP).');
-    return;
-  }
-  if (file.size > 15 * 1024 * 1024) {
-    showError('That image is larger than 15MB — try a smaller file.');
-    return;
-  }
+  clearErr();
+  if (!file.type.startsWith('image/')) { showErr('Please upload a JPG, PNG, or WEBP image.'); return; }
+  if (file.size > 10 * 1024 * 1024) { showErr('Image is over 10MB — please use a smaller photo.'); return; }
   const reader = new FileReader();
   reader.onload = () => {
-    const dataUrl = reader.result;
-    const base64 = dataUrl.split(',')[1];
-    uploadedFile = { base64, mimeType: file.type, name: file.name };
-
-    previewImg.src = dataUrl;
-    previewImg.style.display = 'block';
-    uploadPrompt.style.display = 'none';
-    previewMeta.style.display = 'block';
-    previewMeta.textContent = `${file.name} · ${(file.size / 1024 / 1024).toFixed(1)}MB`;
-
-    updateGenerateState();
+    uploadedDataUrl  = reader.result;
+    generatedDataUrl = null; // new photo, clear cached result
+    prevImg.src = uploadedDataUrl;
+    prevImg.style.display = 'block';
+    upPrompt.style.display = 'none';
+    pillTxt.style.display = 'block';
+    pillTxt.textContent = `${file.name} · ${(file.size/1024/1024).toFixed(1)}MB`;
+    genBtn.disabled = false;
   };
   reader.readAsDataURL(file);
 }
 
-/* ---------- Color swatches ---------- */
-swatchRow.addEventListener('click', (e) => {
-  const swatch = e.target.closest('.swatch');
-  if (!swatch) return;
-  selectSwatch(swatch);
-});
-swatchRow.addEventListener('keydown', (e) => {
-  const swatch = e.target.closest('.swatch');
-  if (!swatch) return;
-  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectSwatch(swatch); }
+/* ════════════════════════════════════════
+   PRESETS UI
+════════════════════════════════════════ */
+const presetRow = document.getElementById('presetRow');
+PRESETS.forEach(p => {
+  const card = document.createElement('div');
+  card.className = 'pcard' + (p.id === 'bd' ? ' sel' : '');
+  card.dataset.id = p.id;
+
+  // Visual proportion indicator
+  const vw = p.w ? Math.round(28 * Math.min(1, p.w/p.h)) : 28;
+  const vh = p.h ? Math.round(28 / Math.min(1, p.w/p.h)) : 36;
+  const vsize = Math.min(vh, 44);
+
+  card.innerHTML = `
+    <div class="flag">${p.flag}</div>
+    <div class="pname">${p.name}</div>
+    <div class="pdesc">${p.w ? p.w+'×'+p.h+'mm' : 'Custom'}</div>
+    <div class="pviz" style="width:${vw}px;height:${vsize}px;"></div>
+  `;
+  presetRow.appendChild(card);
 });
 
-function selectSwatch(swatch) {
-  document.querySelectorAll('.swatch').forEach(s => s.classList.remove('selected'));
-  swatch.classList.add('selected');
-  const color = swatch.dataset.color;
-
-  if (color === 'custom') {
-    customColorWrap.classList.add('show');
-    selectedColor = customColorPicker.value;
-    customColorText.value = selectedColor;
+presetRow.addEventListener('click', e => {
+  const card = e.target.closest('.pcard');
+  if (!card) return;
+  document.querySelectorAll('.pcard').forEach(c => c.classList.remove('sel'));
+  card.classList.add('sel');
+  selectedPreset = PRESETS.find(p => p.id === card.dataset.id);
+  const custDims = document.getElementById('customDims');
+  if (selectedPreset.id === 'cust') {
+    custDims.classList.add('show');
   } else {
-    customColorWrap.classList.remove('show');
-    selectedColor = color;
+    custDims.classList.remove('show');
   }
-}
-customColorPicker.addEventListener('input', () => {
-  selectedColor = customColorPicker.value;
-  customColorText.value = selectedColor;
-});
-customColorText.addEventListener('input', () => {
-  const v = customColorText.value.trim();
-  if (/^#[0-9A-Fa-f]{6}$/.test(v)) {
-    selectedColor = v;
-    customColorPicker.value = v;
-  }
+  generatedDataUrl = null; // different size = need new generation
+  updateFitInfo();
 });
 
-/* ---------- Quantity stepper ---------- */
+['custW','custH'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => {
+    generatedDataUrl = null;
+    updateFitInfo();
+  });
+});
+
+/* ════════════════════════════════════════
+   COLOR SWATCHES
+════════════════════════════════════════ */
+document.querySelector('.sw-row').addEventListener('click', e => {
+  const sw = e.target.closest('.sw');
+  if (!sw) return;
+  document.querySelectorAll('.sw').forEach(s => s.classList.remove('sel'));
+  sw.classList.add('sel');
+  const c = sw.dataset.c;
+  const custCRow = document.getElementById('custCRow');
+  if (c === 'custom') {
+    custCRow.classList.add('show');
+    selectedColor = document.getElementById('cpick').value;
+    document.getElementById('ctxt').value = selectedColor;
+  } else {
+    custCRow.classList.remove('show');
+    selectedColor = c;
+  }
+});
+document.getElementById('cpick').addEventListener('input', e => {
+  selectedColor = e.target.value;
+  document.getElementById('ctxt').value = selectedColor;
+});
+document.getElementById('ctxt').addEventListener('input', e => {
+  const v = e.target.value.trim();
+  if (/^#[0-9A-Fa-f]{6}$/.test(v)) { selectedColor = v; document.getElementById('cpick').value = v; }
+});
+
+/* ════════════════════════════════════════
+   QUANTITY
+════════════════════════════════════════ */
 function setQty(n) {
-  quantity = Math.min(3, Math.max(1, n));
-  qtyDisplay.textContent = quantity;
+  const { w, h } = currentPresetDims();
+  const lo = calcLayout(w||35, h||45);
+  quantity = Math.min(lo.max, Math.max(1, n));
+  document.getElementById('qVal').textContent = quantity;
+  document.getElementById('qhint').innerHTML =
+    `${quantity} cop${quantity===1?'y':'ies'} on A4 sheet<br><span id="fitInfo">max ${lo.max} per A4</span>`;
 }
-qtyMinus.addEventListener('click', () => setQty(quantity - 1));
-qtyPlus.addEventListener('click', () => setQty(quantity + 1));
+document.getElementById('qMinus').addEventListener('click', () => setQty(quantity - 1));
+document.getElementById('qPlus' ).addEventListener('click', () => setQty(quantity + 1));
 
-function getPromptText() {
-  const prompt = promptInput.value.trim();
-  const bgName = selectedColor === 'transparent' ? 'no background hint' : `background color ${selectedColor}`;
-  if (!prompt) {
-    return `${DEFAULT_PROMPT} Use ${bgName}.`;
-  }
-  return `${prompt} Keep the same subject. Use ${bgName}.`;
-}
-
-/* ---------- Generate ---------- */
-async function requestGeneratedImage() {
-  const res = await fetch(SUPABASE_FUNCTION_URL, {
+/* ════════════════════════════════════════
+   GENERATE
+════════════════════════════════════════ */
+async function callLumen(prompt, dataUrl) {
+  const res = await fetch(LUMEN_URL, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-      'apikey': SUPABASE_ANON_KEY,
-    },
-    body: JSON.stringify({
-      image: uploadedFile.base64,
-      mimeType: uploadedFile.mimeType,
-      prompt: getPromptText(),
-      backgroundColor: selectedColor,
-      strength: 0.35,
-    }),
+    headers: { 'Authorization': `Bearer ${LUMEN_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, image: dataUrl, model: LUMEN_MODEL }),
   });
-
-  let data = {};
-  try {
-    data = await res.json();
-  } catch {
-    // ignore, handled below
-  }
-
-  if (!res.ok) {
-    throw new Error(data.error || `Request failed (${res.status})`);
-  }
-  if (!data.image) {
-    throw new Error('No image came back. Try again.');
-  }
-  return data.image;
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || `API error ${res.status}`);
+  if (!data.image?.b64_json) throw new Error('No image returned from AI. Try again.');
+  return `data:image/png;base64,${data.image.b64_json}`;
 }
 
-generateBtn.addEventListener('click', async () => {
-  if (!uploadedFile) return;
-  clearError();
+genBtn.addEventListener('click', async () => {
+  if (!uploadedDataUrl) return;
+  clearErr();
 
-  generateBtn.disabled = true;
-  generateBtn.classList.add('loading');
-  resultsSection.style.display = 'block';
-  renderSkeletons(quantity);
+  const { w, h } = currentPresetDims();
+  if (!w || !h || w < 10 || h < 10) {
+    showErr('Please enter valid dimensions (minimum 10mm each).'); return;
+  }
+
+  genBtn.disabled = true;
+  genBtn.classList.add('loading');
+  progWrap.classList.add('show');
+  progF.style.width = '10%';
+  progL.textContent = 'Sending photo to Gemini AI…';
 
   try {
-    const results = [];
-    for (let i = 0; i < quantity; i++) {
-      results.push(await requestGeneratedImage());
-    }
-    renderResults(results);
-    totalGenerated += results.length;
-    updateFrameCounter();
+    const prompt = buildPrompt(w, h, selectedColor);
+    progF.style.width = '40%';
+    progL.textContent = 'AI is processing your photo…';
+
+    generatedDataUrl = await callLumen(prompt, uploadedDataUrl);
+
+    progF.style.width = '80%';
+    progL.textContent = 'Arranging on A4 sheet…';
+
+    await renderA4(generatedDataUrl);
+
+    progF.style.width = '100%';
+    progL.textContent = 'Done! ✓';
+    setTimeout(() => progWrap.classList.remove('show'), 1500);
+
   } catch (err) {
-    resultsSection.style.display = totalGenerated > 0 ? 'block' : 'none';
-    resultsGrid.querySelectorAll('.skeleton').forEach(s => s.remove());
-    showError(err && err.message ? err.message : 'Something went wrong talking to the server.');
+    showErr(err.message || 'Something went wrong. Please try again.');
+    progWrap.classList.remove('show');
   } finally {
-    generateBtn.disabled = false;
-    generateBtn.classList.remove('loading');
+    genBtn.disabled = false;
+    genBtn.classList.remove('loading');
+    progF.style.width = '0%';
   }
 });
 
-function renderSkeletons(n) {
-  resultsGrid.innerHTML = '';
-  resultsCount.textContent = `generating ${n}…`;
-  for (let i = 0; i < n; i++) {
-    const div = document.createElement('div');
-    div.className = 'skeleton';
-    resultsGrid.appendChild(div);
-  }
-}
-
-function renderResults(dataUrls) {
-  resultsGrid.innerHTML = '';
-  resultsCount.textContent = `${dataUrls.length} image${dataUrls.length > 1 ? 's' : ''}`;
-
-  dataUrls.forEach((dataUrl, i) => {
-    const card = document.createElement('div');
-    card.className = 'result-card';
-
-    const img = document.createElement('img');
-    img.src = dataUrl;
-    img.alt = `Generated result ${i + 1}`;
-
-    const stub = document.createElement('div');
-    stub.className = 'result-stub';
-
-    const label = document.createElement('span');
-    label.textContent = `№ ${String(i + 1).padStart(2,'0')}`;
-
-    const link = document.createElement('a');
-    link.className = 'download-link';
-    link.href = dataUrl;
-    link.download = `openrouter-${Date.now()}-${i + 1}.png`;
-    link.textContent = '↓ PNG';
-
-    stub.appendChild(label);
-    stub.appendChild(link);
-    card.appendChild(img);
-    card.appendChild(stub);
-    resultsGrid.appendChild(card);
-  });
-}
-
-updateGenerateState();
-updateFrameCounter();
-setQty(1);
-
-document.getElementById('testConnBtn').addEventListener('click', async () => {
-  clearError();
-  const btn = document.getElementById('testConnBtn');
-  btn.textContent = 'Testing…';
-  try {
-    const res = await fetch(SUPABASE_FUNCTION_URL, {
-      method: 'OPTIONS',
-      headers: {
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        'apikey': SUPABASE_ANON_KEY,
-      },
-    });
-    showError(`Reachable. OPTIONS responded with status ${res.status}.`);
-  } catch (err) {
-    showError('Still unreachable at the network level: ' + (err.message || err));
-  } finally {
-    btn.textContent = 'Test connection to function (no image needed)';
-  }
+/* ════════════════════════════════════════
+   DOWNLOADS
+════════════════════════════════════════ */
+document.getElementById('dlA4').addEventListener('click', () => {
+  const link = document.createElement('a');
+  link.href = a4Canvas.toDataURL('image/png');
+  link.download = `backdrop-a4-sheet-${Date.now()}.png`;
+  link.click();
 });
+
+document.getElementById('dlSingle').addEventListener('click', async () => {
+  if (!generatedDataUrl) return;
+  const { w, h } = currentPresetDims();
+
+  // Crop to exact ratio
+  const img  = await loadImgAsync(generatedDataUrl);
+  const tgt  = w / h;
+  const src  = img.width / img.height;
+  let sx, sy, sw, sh;
+  if (src > tgt) {
+    sh=img.height; sw=sh*tgt; sx=(img.width-sw)/2; sy=0;
+  } else {
+    sw=img.width; sh=sw/tgt; sx=0; sy=Math.max(0,(img.height-sh)*.2);
+  }
+
+  // Render at 300 DPI equivalent for single photo
+  const outW = Math.round(w * 300/25.4);
+  const outH = Math.round(h * 300/25.4);
+  const c = document.createElement('canvas');
+  c.width = outW; c.height = outH;
+  c.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
+
+  const link = document.createElement('a');
+  link.href = c.toDataURL('image/png');
+  link.download = `backdrop-${w}x${h}mm-300dpi-${Date.now()}.png`;
+  link.click();
+});
+
+/* ════════════════════════════════════════
+   INIT
+════════════════════════════════════════ */
+updateFitInfo();
+setQty(4);
 </script>
-
-
 </body>
 </html>
