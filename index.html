@@ -280,7 +280,7 @@ footer{text-align:center;margin-top:44px;font-family:'Space Mono',monospace;font
 <!-- HERO -->
 <div class="hero">
   <h1>Professional photos<br><em>in seconds</em></h1>
-  <p>Passport · ID · Visa · Studio quality with background removal, outfit change & HD enhancement — self-hosted</p>
+  <p>Passport · ID · Visa · Studio quality with AI background removal, outfit change & HD enhancement</p>
 </div>
 
 <!-- STEP DOTS -->
@@ -420,8 +420,8 @@ footer{text-align:center;margin-top:44px;font-family:'Space Mono',monospace;font
   <div class="ptrack"><div class="pfill" id="pfill" style="width:0%"></div></div>
   <div class="psteps">
     <div class="pst" id="ps0">Upload</div>
-    <div class="pst" id="ps1">AI Edit</div>
-    <div class="pst" id="ps2">Enhance</div>
+    <div class="pst" id="ps1">Hosting</div>
+    <div class="pst" id="ps2">AI Edit</div>
     <div class="pst" id="ps3">HD Output</div>
     <div class="pst" id="ps4">A4 Layout</div>
   </div>
@@ -444,17 +444,25 @@ footer{text-align:center;margin-top:44px;font-family:'Space Mono',monospace;font
 
 <footer>
   GoBy.pics · AI Photo Studio<br>
-  Self-hosted backend · No external API required
+  Powered by Pollinations.ai · Flux Kontext · 100% Free & Unlimited
 </footer>
 </div>
 
 <script>
 /* ═══════════════════════════════════════
-   CONFIG — SELF-HOSTED BACKEND
+   CONFIG — Pollinations.ai (FREE, No API Key needed)
+   Pipeline: imgbb (free host) → Pollinations Kontext (free AI edit)
 ═══════════════════════════════════════ */
-const API_EDIT = window.GOBY_API || '/api/process';
-// This frontend now talks to your own backend only.
-// The backend should return: { image_b64: "...base64 png..." }
+
+// imgbb free anonymous upload — returns a public URL for Kontext
+const IMGBB_API  = 'https://api.imgbb.com/1/upload';
+const IMGBB_KEY  = '2b821f1e18b1765e7f279b0a9f3a3a1e'; // free public key
+
+// Pollinations Kontext — completely free, no key needed
+const POLLINATIONS_IMG  = 'https://image.pollinations.ai/prompt/';
+const KONTEXT_MODEL     = 'kontext';
+const KONTEXT_WIDTH     = 1024;
+const KONTEXT_HEIGHT    = 1024;
 
 /* ═══════════════════════════════════════
    DRESS OPTIONS
@@ -512,13 +520,14 @@ const PRESETS = [
 /* ═══════════════════════════════════════
    STATE
 ═══════════════════════════════════════ */
-let photo    = null;  // dataUrl
-let dress    = null;  // dress object
-let gender   = 'men';
-let preset   = PRESETS[0];
-let color    = '#FFFFFF';
-let qty      = 4;
-let lastEdit = null;  // cached AI result dataUrl
+let photo      = null;   // dataUrl (base64)
+let photoFile  = null;   // original File object
+let dress      = null;   // dress object
+let gender     = 'men';
+let preset     = PRESETS[0];
+let color      = '#FFFFFF';
+let qty        = 4;
+let lastEdit   = null;   // cached AI result URL (objectURL or data URL)
 
 /* ═══════════════════════════════════════
    ELEMENTS
@@ -599,15 +608,16 @@ function updateFit() {
   document.getElementById('qv').textContent = qty;
 }
 
-const imgAsync = src => new Promise((res,rej) => {
+const imgAsync = src => new Promise((res, rej) => {
   const i = new Image();
+  i.crossOrigin = 'anonymous';
   i.onload = () => res(i);
-  i.onerror = rej;
+  i.onerror = () => rej(new Error('Image load failed'));
   i.src = src;
 });
 
 /* ═══════════════════════════════════════
-   A4 RENDER — photos from top-left corner
+   A4 RENDER
 ═══════════════════════════════════════ */
 async function renderA4(url) {
   const {w, h} = dims();
@@ -617,13 +627,11 @@ async function renderA4(url) {
   a4c.height = A4H;
   const ctx = a4c.getContext('2d');
 
-  // White paper background
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, A4W, A4H);
 
   const img = await imgAsync(url);
 
-  // Crop to target aspect ratio, keeping subject head (18% from top)
   const tgt = w / h, src = img.width / img.height;
   let sx, sy, sw, sh;
   if (src > tgt) {
@@ -632,7 +640,6 @@ async function renderA4(url) {
     sw=img.width; sh=sw/tgt; sx=0; sy=Math.max(0,(img.height-sh)*0.18);
   }
 
-  // Place photos starting from TOP-LEFT corner
   const count = Math.min(qty, lo.max);
   for (let i = 0; i < count; i++) {
     const col = i % lo.perRow;
@@ -683,7 +690,7 @@ Clothing rules:
 
   return `PROFESSIONAL PASSPORT/ID PHOTO STUDIO — Process this portrait with the highest quality.
 
-REFRAMING — ${wMM}×${hMM}mm (ratio ${wMM}:${hMM}):
+REFRAMING — ${wMM}x${hMM}mm (ratio ${wMM}:${hMM}):
 - Crop to exact ${wMM}:${hMM} aspect ratio
 - Face occupies 70-80% of frame height
 - Eyes at 35-40% from top of frame
@@ -716,7 +723,70 @@ CRITICAL — PHOTOREALISM:
 }
 
 /* ═══════════════════════════════════════
-   UPLOAD
+   STEP 1: Upload photo to imgbb → get public URL
+═══════════════════════════════════════ */
+async function uploadToImgbb(dataUrl) {
+  // Extract base64 from data URL (remove "data:image/...;base64," prefix)
+  const base64 = dataUrl.split(',')[1];
+
+  const formData = new FormData();
+  formData.append('key', IMGBB_KEY);
+  formData.append('image', base64);
+  formData.append('expiration', '600'); // auto-delete after 10 min for privacy
+
+  const res = await fetch(IMGBB_API, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!res.ok) {
+    throw new Error(`Image hosting failed (${res.status}). Please try again.`);
+  }
+
+  const data = await res.json();
+
+  if (!data.success || !data.data?.url) {
+    throw new Error('Could not host image. Please try again.');
+  }
+
+  return data.data.url; // public HTTPS URL
+}
+
+/* ═══════════════════════════════════════
+   STEP 2: Call Pollinations Kontext with public URL
+═══════════════════════════════════════ */
+async function callKontext(prompt, imageUrl) {
+  const encodedPrompt = encodeURIComponent(prompt);
+
+  const params = new URLSearchParams({
+    model:  KONTEXT_MODEL,
+    image:  imageUrl,
+    width:  KONTEXT_WIDTH,
+    height: KONTEXT_HEIGHT,
+    nologo: 'true',
+    seed:   Math.floor(Math.random() * 99999),
+  });
+
+  const url = `${POLLINATIONS_IMG}${encodedPrompt}?${params.toString()}`;
+
+  // Pollinations returns image binary directly (JPEG)
+  const res = await fetch(url, { method: 'GET' });
+
+  if (!res.ok) {
+    throw new Error(`AI processing failed (${res.status}). Please wait 15 seconds and try again.`);
+  }
+
+  const blob = await res.blob();
+
+  if (!blob || blob.size < 1000) {
+    throw new Error('AI returned an empty result. Please try again.');
+  }
+
+  return URL.createObjectURL(blob);
+}
+
+/* ═══════════════════════════════════════
+   UPLOAD (file input + drag & drop)
 ═══════════════════════════════════════ */
 dropZone.addEventListener('click', () => fileInp.click());
 dropZone.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' '){e.preventDefault();fileInp.click();} });
@@ -730,12 +800,12 @@ function handleFile(file) {
   if (!file.type.startsWith('image/')) { showErr('Please upload a JPG, PNG, or WebP image.'); return; }
   if (file.size > 10*1024*1024) { showErr('Image over 10MB — please use a smaller photo.'); return; }
 
-  // Show scan animation while reading
   scan.classList.add('on');
   const r = new FileReader();
   r.onload = () => {
-    photo = r.result;
-    lastEdit = null;
+    photo     = r.result;
+    photoFile = file;
+    lastEdit  = null;
     prevImg.src = photo;
     prevImg.style.display = 'block';
     upPrompt.style.display = 'none';
@@ -765,7 +835,6 @@ function renderDress(g) {
     const wrap = document.createElement('div');
     wrap.className = 'dimg-wrap';
 
-    // Fallback emoji layer (always present, hidden when image loads)
     const fb = document.createElement('div');
     fb.className = 'dfb';
     fb.textContent = d.emoji;
@@ -878,29 +947,30 @@ document.getElementById('qm').addEventListener('click', ()=>setQty(qty-1));
 document.getElementById('qp').addEventListener('click', ()=>setQty(qty+1));
 
 /* ═══════════════════════════════════════
-   GENERATE
+   GENERATE — Main Pipeline
+   1. Compress image if needed
+   2. Upload to imgbb → public URL
+   3. Call Pollinations Kontext → edited image
+   4. Render A4 sheet
 ═══════════════════════════════════════ */
-async function callLocalProcess(prompt, imgDataUrl, meta) {
-  const res = await fetch(API_EDIT, {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({
-      prompt,
-      image: imgDataUrl,
-      bg_color: color,
-      width_mm: meta.w,
-      height_mm: meta.h,
-      gender,
-      outfit: dress?.custom ? (document.getElementById('cdtxt').value.trim() || '') : (dress?.id || ''),
-      copies: qty
-    }),
+
+// Compress/resize image to max 1200px and JPEG for faster upload
+async function compressImage(dataUrl, maxSide = 1200) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      let {width: w, height: h} = img;
+      if (w > maxSide || h > maxSide) {
+        if (w > h) { h = Math.round(h * maxSide / w); w = maxSide; }
+        else       { w = Math.round(w * maxSide / h); h = maxSide; }
+      }
+      const cv = document.createElement('canvas');
+      cv.width = w; cv.height = h;
+      cv.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(cv.toDataURL('image/jpeg', 0.88));
+    };
+    img.src = dataUrl;
   });
-  let data = {};
-  try { data = await res.json(); } catch (_) {}
-  if (!res.ok) throw new Error(data.error || `Backend error ${res.status}`);
-  const b64 = data.image_b64 || data.image || data.result_b64;
-  if (!b64) throw new Error('No image returned from your backend.');
-  return b64.startsWith('data:') ? b64 : `data:image/png;base64,${b64}`;
 }
 
 genBtn.addEventListener('click', async () => {
@@ -915,28 +985,47 @@ genBtn.addEventListener('click', async () => {
   prog.classList.add('on');
   rtwrap.classList.remove('on');
 
+  // Revoke old objectURL to free memory
+  if (lastEdit && lastEdit.startsWith('blob:')) {
+    URL.revokeObjectURL(lastEdit);
+    lastEdit = null;
+  }
+
   try {
-    setProgress(8, 'Preparing photo…', 0);
-    await new Promise(r=>setTimeout(r,150));
+    // ── Step 0: Prepare / compress ───────────────────
+    setProgress(5, 'Preparing photo…', 0);
+    const compressed = await compressImage(photo, 1200);
 
-    setProgress(18, 'Sending to your local engine…', 1);
+    // ── Step 1: Upload to imgbb ───────────────────────
+    setProgress(15, 'Hosting image (step 1/3)…', 1);
+    const publicUrl = await uploadToImgbb(compressed);
+
+    // ── Step 2: Pollinations Kontext AI edit ─────────
+    setProgress(30, 'AI processing with Flux Kontext… (20–60s)', 2);
     const prompt = buildPrompt(w, h);
+    lastEdit = await callKontext(prompt, publicUrl);
 
-    setProgress(30, 'AI processing (may take 15–30s)…', 2);
-    lastEdit = await callLocalProcess(prompt, photo, { w, h });
+    // ── Step 3: Render HD output ──────────────────────
+    setProgress(85, 'Rendering HD output…', 3);
+    await new Promise(r => setTimeout(r, 80));
 
-    setProgress(82, 'Rendering HD output…', 3);
-    await new Promise(r=>setTimeout(r,80));
-
-    setProgress(92, 'Building A4 sheet…', 4);
+    // ── Step 4: Build A4 sheet ────────────────────────
+    setProgress(94, 'Building A4 sheet…', 4);
     await renderA4(lastEdit);
 
     setProgress(100, 'Done! ✓', 4);
     setStepDots(4);
-    setTimeout(()=>prog.classList.remove('on'), 1800);
+    setTimeout(() => prog.classList.remove('on'), 2000);
 
-  } catch(err) {
-    showErr(err.message || 'Something went wrong. Please try again.');
+  } catch (err) {
+    // Friendly error messages
+    let msg = err.message || 'Something went wrong. Please try again.';
+    if (msg.includes('429') || msg.includes('rate')) {
+      msg = 'Rate limit reached. Please wait 15–20 seconds and try again.';
+    } else if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+      msg = 'Network error. Check your internet connection and try again.';
+    }
+    showErr(msg);
     prog.classList.remove('on');
   } finally {
     genBtn.disabled = false;
@@ -958,20 +1047,25 @@ document.getElementById('dlA4').addEventListener('click', () => {
 
 document.getElementById('dlOne').addEventListener('click', async () => {
   if (!lastEdit) return;
-  const {w,h} = dims();
-  const img = await imgAsync(lastEdit);
-  const tgt=w/h, src=img.width/img.height;
-  let sx,sy,sw,sh;
-  if(src>tgt){sh=img.height;sw=sh*tgt;sx=(img.width-sw)/2;sy=0;}
-  else{sw=img.width;sh=sw/tgt;sx=0;sy=Math.max(0,(img.height-sh)*.18);}
-  const outW=Math.round(w*300/25.4), outH=Math.round(h*300/25.4);
-  const cv=document.createElement('canvas');
-  cv.width=outW;cv.height=outH;
-  cv.getContext('2d').drawImage(img,sx,sy,sw,sh,0,0,outW,outH);
-  const a=document.createElement('a');
-  a.href=cv.toDataURL('image/png');
-  a.download=`goby-${w}x${h}mm-300dpi-${Date.now()}.png`;
-  a.click();
+  const {w, h} = dims();
+
+  try {
+    const img = await imgAsync(lastEdit);
+    const tgt = w/h, src = img.width/img.height;
+    let sx, sy, sw, sh;
+    if (src > tgt) { sh=img.height; sw=sh*tgt; sx=(img.width-sw)/2; sy=0; }
+    else           { sw=img.width;  sh=sw/tgt; sx=0; sy=Math.max(0,(img.height-sh)*.18); }
+    const outW = Math.round(w*300/25.4), outH = Math.round(h*300/25.4);
+    const cv = document.createElement('canvas');
+    cv.width = outW; cv.height = outH;
+    cv.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
+    const a = document.createElement('a');
+    a.href = cv.toDataURL('image/png');
+    a.download = `goby-${w}x${h}mm-300dpi-${Date.now()}.png`;
+    a.click();
+  } catch (e) {
+    showErr('Could not export single photo. Try downloading the A4 sheet instead.');
+  }
 });
 
 /* ═══════════════════════════════════════
