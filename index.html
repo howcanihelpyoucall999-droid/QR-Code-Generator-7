@@ -1,986 +1,115 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <meta name="theme-color" content="#07091A">
-  <title>PassportAI — Background Remover</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
-  <style>
-    /* ──────────────────────────────────────────
-       Design tokens
-    ────────────────────────────────────────── */
-    :root {
-      --bg:          #07091A;
-      --surface:     #0D1028;
-      --surface-2:   #12162F;
-      --surface-3:   #171C3A;
-      --border:      #1C2240;
-      --border-hi:   #2D3760;
-      --accent:      #5B78F5;
-      --accent-2:    #A78BFA;
-      --glow:        rgba(91,120,245,.22);
-      --glow-2:      rgba(167,139,250,.15);
-      --text:        #ECF0FF;
-      --text-sec:    #8A90B8;
-      --text-muted:  #4A5070;
-      --error:       #FF6B8A;
-      --error-bg:    rgba(255,107,138,.1);
-      --success:     #3EDBA8;
-      --success-bg:  rgba(62,219,168,.1);
-      --radius:      18px;
-      --radius-sm:   12px;
-      --radius-xs:   8px;
-    }
-
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
-
-    body {
-      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      line-height: 1.55;
-      -webkit-font-smoothing: antialiased;
-      padding-bottom: env(safe-area-inset-bottom, 24px);
-    }
-
-    /* ──────────────────────────────────────────
-       Header
-    ────────────────────────────────────────── */
-    .header {
-      text-align: center;
-      padding: 28px 20px 4px;
-    }
-
-    .logo-lockup {
-      display: inline-flex;
-      align-items: center;
-      gap: 11px;
-      margin-bottom: 8px;
-    }
-
-    .logo-gem {
-      width: 40px; height: 40px;
-      background: linear-gradient(145deg, #5B78F5 0%, #A78BFA 100%);
-      border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 20px;
-      box-shadow: 0 4px 16px var(--glow);
-      flex-shrink: 0;
-    }
-
-    .logo-name {
-      font-size: 24px;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-      background: linear-gradient(120deg, #fff 20%, #A78BFA 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .tagline {
-      font-size: 13.5px;
-      color: var(--text-muted);
-      letter-spacing: 0.02em;
-      margin-bottom: 0;
-    }
-
-    /* ──────────────────────────────────────────
-       Container
-    ────────────────────────────────────────── */
-    .container {
-      max-width: 640px;
-      margin: 0 auto;
-      padding: 20px 16px 48px;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-
-    /* ──────────────────────────────────────────
-       Cards
-    ────────────────────────────────────────── */
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 20px;
-    }
-
-    .card-header {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 16px;
-    }
-
-    .step-pill {
-      background: linear-gradient(135deg, var(--accent), var(--accent-2));
-      color: #fff;
-      font-size: 11px;
-      font-weight: 700;
-      padding: 3px 9px;
-      border-radius: 20px;
-      letter-spacing: 0.04em;
-    }
-
-    .card-title {
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--text-sec);
-      text-transform: uppercase;
-      letter-spacing: 0.07em;
-    }
-
-    /* ──────────────────────────────────────────
-       Upload zone
-    ────────────────────────────────────────── */
-    .upload-zone {
-      border: 2px dashed var(--border-hi);
-      border-radius: var(--radius-sm);
-      padding: 36px 20px;
-      text-align: center;
-      cursor: pointer;
-      transition: border-color .2s, background .2s;
-      position: relative;
-      background: var(--surface-2);
-    }
-
-    .upload-zone:hover { border-color: var(--accent); background: rgba(91,120,245,.06); }
-    .upload-zone.dragover { border-color: var(--accent); background: rgba(91,120,245,.1); }
-    .upload-zone.has-file { padding: 14px; }
-
-    .upload-zone input[type="file"] {
-      position: absolute; inset: 0;
-      opacity: 0; cursor: pointer;
-      width: 100%; height: 100%;
-    }
-
-    .upload-placeholder { pointer-events: none; }
-    .upload-icon { font-size: 40px; display: block; margin-bottom: 10px; }
-    .upload-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
-    .upload-sub { font-size: 13px; color: var(--text-muted); }
-
-    .input-preview {
-      display: none;
-      pointer-events: none;
-    }
-    .input-preview img {
-      width: 100%;
-      max-height: 220px;
-      object-fit: contain;
-      border-radius: var(--radius-xs);
-      display: block;
-    }
-    .input-preview .file-meta {
-      margin-top: 10px;
-      font-size: 12.5px;
-      color: var(--text-muted);
-      text-align: center;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-    }
-    .input-preview .change-hint {
-      color: var(--accent);
-      font-weight: 600;
-    }
-
-    /* ──────────────────────────────────────────
-       Color picker
-    ────────────────────────────────────────── */
-    .color-section { display: flex; flex-direction: column; gap: 14px; }
-
-    .swatches-row {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-
-    .swatch {
-      width: 38px; height: 38px;
-      border-radius: 50%;
-      border: 3px solid transparent;
-      cursor: pointer;
-      transition: transform .15s, box-shadow .15s;
-      flex-shrink: 0;
-      position: relative;
-    }
-    .swatch:hover { transform: scale(1.14); }
-    .swatch.active {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent), 0 4px 12px var(--glow);
-    }
-
-    .swatch-white::after {
-      content: '';
-      position: absolute;
-      inset: 0; border-radius: 50%;
-      border: 1px solid rgba(255,255,255,.18);
-    }
-
-    .hex-row {
-      display: flex; align-items: center; gap: 10px;
-    }
-
-    .color-preview-box {
-      width: 44px; height: 44px;
-      border-radius: var(--radius-xs);
-      border: 1px solid var(--border-hi);
-      overflow: hidden;
-      position: relative;
-      flex-shrink: 0;
-      cursor: pointer;
-    }
-    .color-preview-box-fill {
-      width: 100%; height: 100%;
-      transition: background .15s;
-    }
-    .color-preview-box input[type="color"] {
-      position: absolute; inset: -4px;
-      width: calc(100% + 8px); height: calc(100% + 8px);
-      opacity: 0; cursor: pointer; border: none;
-    }
-
-    .hex-input {
-      flex: 1;
-      background: var(--surface-2);
-      border: 1px solid var(--border-hi);
-      border-radius: var(--radius-xs);
-      color: var(--text);
-      font-family: 'Plus Jakarta Sans', monospace;
-      font-size: 15px; font-weight: 600;
-      padding: 10px 14px;
-      outline: none;
-      transition: border-color .2s;
-      letter-spacing: 0.05em;
-    }
-    .hex-input:focus { border-color: var(--accent); }
-
-    /* ──────────────────────────────────────────
-       Progress steps
-    ────────────────────────────────────────── */
-    .progress-track {
-      display: none;
-      gap: 0;
-      margin: 0 -16px;
-    }
-    .progress-track.visible { display: flex; }
-
-    .progress-step {
-      flex: 1;
-      height: 3px;
-      background: var(--border);
-      transition: background .4s;
-      border-radius: 2px;
-    }
-    .progress-step + .progress-step { margin-left: 4px; }
-    .progress-step.done { background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
-    .progress-step.active {
-      background: linear-gradient(90deg, var(--accent), var(--accent-2));
-      animation: pulse-bar 1s ease-in-out infinite;
-    }
-    @keyframes pulse-bar { 0%,100%{opacity:1} 50%{opacity:.5} }
-
-    /* ──────────────────────────────────────────
-       Status banner
-    ────────────────────────────────────────── */
-    .status-banner {
-      display: none;
-      align-items: center;
-      gap: 12px;
-      padding: 14px 18px;
-      border-radius: var(--radius-sm);
-      font-size: 14px; font-weight: 600;
-      border: 1px solid transparent;
-    }
-    .status-banner.visible { display: flex; }
-    .status-banner.loading {
-      background: var(--surface-2);
-      border-color: var(--border-hi);
-      color: var(--text-sec);
-    }
-    .status-banner.error {
-      background: var(--error-bg);
-      border-color: rgba(255,107,138,.3);
-      color: var(--error);
-    }
-    .status-banner.success {
-      background: var(--success-bg);
-      border-color: rgba(62,219,168,.3);
-      color: var(--success);
-    }
-
-    .spinner {
-      width: 18px; height: 18px;
-      border: 2.5px solid transparent;
-      border-top-color: currentColor;
-      border-radius: 50%;
-      animation: spin .65s linear infinite;
-      flex-shrink: 0;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .status-icon { font-size: 18px; flex-shrink: 0; }
-
-    /* ──────────────────────────────────────────
-       Action button
-    ────────────────────────────────────────── */
-    .btn-action {
-      width: 100%; padding: 17px;
-      border: none; border-radius: var(--radius-sm);
-      background: linear-gradient(135deg, #5B78F5 0%, #8B68F0 60%, #A78BFA 100%);
-      color: #fff;
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      font-size: 16px; font-weight: 800;
-      letter-spacing: 0.01em;
-      cursor: pointer;
-      transition: opacity .2s, transform .15s, box-shadow .2s;
-      box-shadow: 0 4px 20px var(--glow);
-      -webkit-tap-highlight-color: transparent;
-    }
-    .btn-action:hover:not(:disabled) {
-      transform: translateY(-1px);
-      box-shadow: 0 8px 28px var(--glow);
-    }
-    .btn-action:active:not(:disabled) { transform: translateY(0); }
-    .btn-action:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
-
-    /* ──────────────────────────────────────────
-       Results section
-    ────────────────────────────────────────── */
-    .results-wrap {
-      display: none;
-      flex-direction: column;
-      gap: 14px;
-    }
-    .results-wrap.visible {
-      display: flex;
-      animation: fadeSlide .4s ease both;
-    }
-    @keyframes fadeSlide {
-      from { opacity: 0; transform: translateY(10px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    /* Before / After grid */
-    .ba-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-
-    .ba-panel {
-      border-radius: var(--radius-sm);
-      overflow: hidden;
-      border: 1px solid var(--border);
-    }
-
-    .ba-label {
-      font-size: 11px; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.09em;
-      color: var(--text-muted);
-      padding: 8px 12px 6px;
-      background: var(--surface-3);
-      border-bottom: 1px solid var(--border);
-    }
-
-    .ba-panel img, .ba-panel canvas {
-      display: block; width: 100%;
-      height: 150px; object-fit: contain;
-      background: var(--surface-2);
-    }
-
-    .after-canvas-wrap {
-      background:
-        repeating-conic-gradient(#1A1D3C 0% 25%, #131629 0% 50%)
-        0 0 / 14px 14px;
-    }
-
-    /* Full result */
-    .result-frame {
-      background:
-        repeating-conic-gradient(#1A1D3C 0% 25%, #131629 0% 50%)
-        0 0 / 14px 14px;
-      border-radius: var(--radius-sm);
-      overflow: hidden;
-      margin-bottom: 14px;
-    }
-
-    #resultCanvas {
-      display: block; width: 100%;
-      max-height: 360px; object-fit: contain;
-    }
-
-    /* Buttons row */
-    .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-
-    .btn-download {
-      padding: 15px;
-      border: none; border-radius: var(--radius-sm);
-      background: linear-gradient(135deg, #0EA56C, #06D48C);
-      color: #fff;
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      font-size: 15px; font-weight: 700;
-      cursor: pointer;
-      transition: transform .15s, box-shadow .2s;
-      box-shadow: 0 4px 16px rgba(6,212,140,.22);
-      -webkit-tap-highlight-color: transparent;
-    }
-    .btn-download:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(6,212,140,.32); }
-    .btn-download:active { transform: translateY(0); }
-
-    .btn-reset {
-      padding: 15px;
-      background: var(--surface-2);
-      border: 1px solid var(--border-hi);
-      border-radius: var(--radius-sm);
-      color: var(--text-sec);
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      font-size: 15px; font-weight: 600;
-      cursor: pointer;
-      transition: border-color .2s, color .2s;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .btn-reset:hover { border-color: var(--text-muted); color: var(--text); }
-
-    /* ──────────────────────────────────────────
-       Info blurb
-    ────────────────────────────────────────── */
-    .info-blurb {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      padding: 14px 16px;
-      background: var(--surface-2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      font-size: 12.5px;
-      color: var(--text-muted);
-      line-height: 1.6;
-    }
-    .info-blurb .info-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
-
-    /* ──────────────────────────────────────────
-       Responsive
-    ────────────────────────────────────────── */
-    @media (max-width: 360px) {
-      .ba-grid  { grid-template-columns: 1fr; }
-      .btn-row  { grid-template-columns: 1fr; }
-    }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Passport Photo Maker</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-
-<!-- ═══════════════════════════════════════
-     HEADER
-═══════════════════════════════════════ -->
-<div class="header">
-  <div class="logo-lockup">
-    <div class="logo-gem">🪪</div>
-    <span class="logo-name">PassportAI</span>
-  </div>
-  <p class="tagline">Remove background · Apply solid color · Download in seconds</p>
-</div>
-
-<!-- ═══════════════════════════════════════
-     MAIN CONTAINER
-═══════════════════════════════════════ -->
-<div class="container">
-
-  <!-- ─── Card 1 – Upload ─── -->
-  <div class="card">
-    <div class="card-header">
-      <span class="step-pill">Step 1</span>
-      <span class="card-title">Upload Your Photo</span>
-    </div>
-
-    <div class="upload-zone" id="uploadZone">
-      <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp" aria-label="Upload photo">
-      <div class="upload-placeholder" id="uploadPlaceholder">
-        <span class="upload-icon">📷</span>
-        <p class="upload-title">Tap to select a photo</p>
-        <p class="upload-sub">JPG, PNG or WEBP · Max 10 MB</p>
+  <div class="app-shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Passport Photo Studio</p>
+        <h1>Remove background, choose a color, and export print-ready photos.</h1>
+        <p class="subtext">Upload a photo, try ClearBackdrop directly, and automatically fall back to your proxy if the browser blocks the request.</p>
       </div>
-      <div class="input-preview" id="inputPreview">
-        <img id="previewImg" src="" alt="Selected photo preview">
-        <div class="file-meta">
-          <span id="fileMetaText"></span>
-          <span class="change-hint">· Tap to change</span>
+      <div class="status-card">
+        <div class="status-label">Processing status</div>
+        <div id="statusText" class="status-value">Waiting for an image</div>
+        <div id="progressBar" class="progress-track"><span></span></div>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel controls">
+        <div class="card">
+          <label class="field-label" for="imageInput">Upload image</label>
+          <input id="imageInput" type="file" accept="image/*" />
         </div>
-      </div>
-    </div>
-  </div>
 
-  <!-- ─── Card 2 – Background color ─── -->
-  <div class="card">
-    <div class="card-header">
-      <span class="step-pill">Step 2</span>
-      <span class="card-title">Choose Background Color</span>
-    </div>
-    <div class="color-section">
-
-      <!-- Quick swatches -->
-      <div class="swatches-row" id="swatchRow">
-        <button class="swatch swatch-white active"
-                style="background:#FFFFFF"
-                data-color="#FFFFFF" title="White" aria-label="White"></button>
-        <button class="swatch"
-                style="background:#5B86E5"
-                data-color="#5B86E5" title="Passport Blue" aria-label="Passport Blue"></button>
-        <button class="swatch"
-                style="background:#C8D9F0"
-                data-color="#C8D9F0" title="US Visa Blue" aria-label="US Visa Blue"></button>
-        <button class="swatch"
-                style="background:#F5EDD9"
-                data-color="#F5EDD9" title="Cream" aria-label="Cream"></button>
-        <button class="swatch"
-                style="background:#FAD4D4"
-                data-color="#FAD4D4" title="Soft Pink" aria-label="Soft Pink"></button>
-        <button class="swatch"
-                style="background:#111111; border:1px solid #444"
-                data-color="#111111" title="Black" aria-label="Black"></button>
-      </div>
-
-      <!-- Color picker + hex input -->
-      <div class="hex-row">
-        <div class="color-preview-box" id="colorBox" title="Open color picker">
-          <div class="color-preview-box-fill" id="colorBoxFill"></div>
-          <input type="color" id="colorPicker" value="#FFFFFF" aria-label="Color picker">
-        </div>
-        <input type="text" class="hex-input" id="hexInput"
-               value="#FFFFFF" maxlength="7"
-               placeholder="#FFFFFF" spellcheck="false"
-               aria-label="Hex color value">
-      </div>
-
-    </div>
-  </div>
-
-  <!-- ─── Progress track ─── -->
-  <div class="progress-track" id="progressTrack">
-    <div class="progress-step" id="step1"></div>
-    <div class="progress-step" id="step2"></div>
-    <div class="progress-step" id="step3"></div>
-  </div>
-
-  <!-- ─── Status banner ─── -->
-  <div class="status-banner" id="statusBanner" role="status" aria-live="polite">
-    <div class="spinner" id="statusSpinner" aria-hidden="true"></div>
-    <span class="status-icon" id="statusIcon" style="display:none"></span>
-    <span id="statusText"></span>
-  </div>
-
-  <!-- ─── Action button ─── -->
-  <button class="btn-action" id="removeBtn" disabled aria-label="Remove background">
-    ✨ Remove Background
-  </button>
-
-  <!-- ─── Info blurb ─── -->
-  <div class="info-blurb">
-    <span class="info-icon">ℹ️</span>
-    <span>Powered by <strong style="color:var(--text-sec)">ClearBackdrop</strong> — free AI background removal, no account needed. Up to 100 images/hr. Your photo is processed securely and never stored.</span>
-  </div>
-
-  <!-- ─── Results ─── -->
-  <div class="results-wrap" id="resultsWrap">
-
-    <!-- Before / After -->
-    <div class="card">
-      <div class="card-header" style="margin-bottom:12px">
-        <span class="card-title">Before &amp; After</span>
-      </div>
-      <div class="ba-grid">
-        <div class="ba-panel">
-          <div class="ba-label">Before</div>
-          <img id="beforeImg" src="" alt="Original photo">
-        </div>
-        <div class="ba-panel">
-          <div class="ba-label">After</div>
-          <div class="after-canvas-wrap">
-            <canvas id="afterCanvas" aria-label="After preview"></canvas>
+        <div class="card">
+          <label class="field-label" for="bgColor">Background color</label>
+          <div class="color-row">
+            <input id="bgColor" type="color" value="#ffffff" />
+            <input id="bgHex" type="text" value="#ffffff" maxlength="7" />
+          </div>
+          <div class="swatches">
+            <button class="swatch" data-color="#ffffff" style="--swatch:#ffffff">White</button>
+            <button class="swatch" data-color="#e8f1ff" style="--swatch:#e8f1ff">Blue</button>
+            <button class="swatch" data-color="#f2f2f2" style="--swatch:#f2f2f2">Gray</button>
+            <button class="swatch" data-color="#ffe8e8" style="--swatch:#ffe8e8">Pink</button>
           </div>
         </div>
-      </div>
-    </div>
 
-    <!-- Final result + download -->
-    <div class="card">
-      <div class="card-header" style="margin-bottom:12px">
-        <span class="card-title">Final Passport Photo</span>
-      </div>
-      <div class="result-frame">
-        <canvas id="resultCanvas" aria-label="Final composited photo"></canvas>
-      </div>
-      <div class="btn-row">
-        <button class="btn-download" id="downloadBtn" aria-label="Download photo">
-          ⬇ Download PNG
-        </button>
-        <button class="btn-reset" id="resetBtn" aria-label="Reset and start over">
-          ↺ Start Over
-        </button>
-      </div>
-    </div>
+        <div class="card">
+          <label class="field-label" for="sizePreset">Passport size</label>
+          <select id="sizePreset">
+            <option value="35x45">35 × 45 mm</option>
+            <option value="2x2">2 × 2 inch</option>
+            <option value="custom">Custom canvas</option>
+          </select>
+          <div class="grid-2">
+            <div>
+              <label class="mini-label" for="widthInput">Width (mm)</label>
+              <input id="widthInput" type="number" min="20" max="100" value="35" />
+            </div>
+            <div>
+              <label class="mini-label" for="heightInput">Height (mm)</label>
+              <input id="heightInput" type="number" min="20" max="100" value="45" />
+            </div>
+          </div>
+        </div>
 
-  </div><!-- /results-wrap -->
+        <div class="card">
+          <label class="field-label" for="copiesInput">Copies on A4</label>
+          <input id="copiesInput" type="number" min="1" max="40" value="8" />
+          <label class="checkline">
+            <input id="fitHead" type="checkbox" checked />
+            <span>Auto-center subject</span>
+          </label>
+          <label class="checkline">
+            <input id="enhancePhoto" type="checkbox" checked />
+            <span>Light enhancement</span>
+          </label>
+        </div>
 
-</div><!-- /container -->
+        <div class="actions">
+          <button id="processBtn" class="primary">Remove background</button>
+          <button id="downloadBtn" class="secondary" disabled>Download PNG</button>
+          <button id="downloadSheetBtn" class="secondary" disabled>Download A4 sheet</button>
+        </div>
 
+        <p class="hint">
+          Direct API: <code id="apiLabel">https://clearbackdrop.com/api/v1/remove-background</code><br>
+          Proxy fallback: <code id="proxyLabel">/api/remove-bg</code>
+        </p>
+      </section>
 
-<script>
-/* ══════════════════════════════════════════════════
-   ClearBackdrop API configuration
-   Endpoint: POST multipart/form-data
-   Field name: "image"
-   Returns: transparent PNG binary
-   No API key required — free up to 100/hr
-══════════════════════════════════════════════════ */
-const API_ENDPOINT  = 'https://clearbackdrop.com/api/v1/remove-background';
-const IMAGE_FIELD   = 'image';   // ClearBackdrop's required multipart field name
+      <section class="panel preview">
+        <div class="card preview-card">
+          <div class="preview-head">
+            <h2>Preview</h2>
+            <span id="previewInfo">No output yet</span>
+          </div>
+          <div class="preview-stage">
+            <canvas id="canvas" width="1000" height="1400"></canvas>
+          </div>
+        </div>
 
-/* ── State ───────────────────────────────────── */
-let selectedFile   = null;
-let selectedColor  = '#FFFFFF';
-let transparentBlob = null;
-let finalDataURL   = null;
-let processing     = false;
+        <div class="card result-card">
+          <h2>How it works</h2>
+          <ol>
+            <li>Upload the image.</li>
+            <li>The app tries ClearBackdrop first.</li>
+            <li>If CORS blocks it, the app retries via your proxy.</li>
+            <li>The subject is placed on your chosen background and rendered to a passport-size sheet.</li>
+          </ol>
+        </div>
+      </section>
+    </main>
+  </div>
 
-/* ── DOM refs ────────────────────────────────── */
-const fileInput       = document.getElementById('fileInput');
-const uploadZone      = document.getElementById('uploadZone');
-const uploadPlaceholder = document.getElementById('uploadPlaceholder');
-const inputPreview    = document.getElementById('inputPreview');
-const previewImg      = document.getElementById('previewImg');
-const fileMetaText    = document.getElementById('fileMetaText');
-
-const swatchRow       = document.getElementById('swatchRow');
-const colorPicker     = document.getElementById('colorPicker');
-const hexInput        = document.getElementById('hexInput');
-const colorBoxFill    = document.getElementById('colorBoxFill');
-
-const progressTrack   = document.getElementById('progressTrack');
-const step1El         = document.getElementById('step1');
-const step2El         = document.getElementById('step2');
-const step3El         = document.getElementById('step3');
-const statusBanner    = document.getElementById('statusBanner');
-const statusSpinner   = document.getElementById('statusSpinner');
-const statusIcon      = document.getElementById('statusIcon');
-const statusText      = document.getElementById('statusText');
-
-const removeBtn       = document.getElementById('removeBtn');
-const resultsWrap     = document.getElementById('resultsWrap');
-const beforeImg       = document.getElementById('beforeImg');
-const afterCanvas     = document.getElementById('afterCanvas');
-const resultCanvas    = document.getElementById('resultCanvas');
-const downloadBtn     = document.getElementById('downloadBtn');
-const resetBtn        = document.getElementById('resetBtn');
-
-/* ── Status helpers ──────────────────────────── */
-function showStatus(type, text) {
-  statusBanner.className = 'status-banner visible ' + type;
-  statusText.textContent = text;
-
-  if (type === 'loading') {
-    statusSpinner.style.display = 'block';
-    statusIcon.style.display = 'none';
-  } else {
-    statusSpinner.style.display = 'none';
-    statusIcon.style.display = 'block';
-    statusIcon.textContent = type === 'error' ? '✗' : '✓';
-  }
-}
-
-function hideStatus() {
-  statusBanner.className = 'status-banner';
-}
-
-/* ── Progress bar helpers ────────────────────── */
-function setProgress(activeStep) {
-  // activeStep: 1 = uploading, 2 = removing, 3 = compositing
-  progressTrack.classList.add('visible');
-  [step1El, step2El, step3El].forEach((el, i) => {
-    const n = i + 1;
-    el.className = 'progress-step' +
-      (n < activeStep ? ' done' : n === activeStep ? ' active' : '');
-  });
-}
-
-function completeProgress() {
-  [step1El, step2El, step3El].forEach(el => el.className = 'progress-step done');
-}
-
-function resetProgress() {
-  progressTrack.classList.remove('visible');
-  [step1El, step2El, step3El].forEach(el => el.className = 'progress-step');
-}
-
-/* ── Color sync ──────────────────────────────── */
-function isHex(v) { return /^#[0-9A-Fa-f]{6}$/.test(v); }
-
-function applyColor(hex) {
-  if (!isHex(hex)) return;
-  selectedColor = hex;
-  colorPicker.value = hex;
-  hexInput.value = hex.toUpperCase();
-  colorBoxFill.style.background = hex;
-
-  document.querySelectorAll('.swatch').forEach(btn => {
-    btn.classList.toggle('active',
-      btn.dataset.color.toUpperCase() === hex.toUpperCase());
-  });
-
-  // Live-update result if we already have a transparent image
-  if (transparentBlob) composite(transparentBlob);
-}
-
-/* ── File handling ───────────────────────────── */
-function handleFile(file) {
-  if (!file) return;
-  if (!['image/jpeg','image/png','image/webp'].includes(file.type)) {
-    showStatus('error', 'Please choose a JPG, PNG, or WEBP image.');
-    return;
-  }
-  if (file.size > 10 * 1024 * 1024) {
-    showStatus('error', 'File too large — please use an image under 10 MB.');
-    return;
-  }
-  hideStatus();
-  selectedFile = file;
-
-  const url = URL.createObjectURL(file);
-  previewImg.src = url;
-  fileMetaText.textContent =
-    file.name.length > 28 ? file.name.slice(0,25)+'…' : file.name +
-    ' · ' + (file.size/1024).toFixed(0) + ' KB';
-
-  uploadPlaceholder.style.display = 'none';
-  inputPreview.style.display      = 'block';
-  uploadZone.classList.add('has-file');
-
-  // Clear old results
-  resultsWrap.classList.remove('visible');
-  transparentBlob = null; finalDataURL = null;
-  resetProgress();
-
-  updateBtn();
-}
-
-fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
-
-uploadZone.addEventListener('dragover', e => {
-  e.preventDefault();
-  uploadZone.classList.add('dragover');
-});
-uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
-uploadZone.addEventListener('drop', e => {
-  e.preventDefault();
-  uploadZone.classList.remove('dragover');
-  handleFile(e.dataTransfer.files[0]);
-});
-
-/* ── Color events ────────────────────────────── */
-colorPicker.addEventListener('input', e => applyColor(e.target.value));
-
-hexInput.addEventListener('input', e => {
-  let v = e.target.value.trim();
-  if (!v.startsWith('#')) v = '#' + v;
-  if (isHex(v)) applyColor(v);
-});
-hexInput.addEventListener('blur', () => {
-  if (!isHex(hexInput.value)) hexInput.value = selectedColor.toUpperCase();
-});
-
-swatchRow.addEventListener('click', e => {
-  const btn = e.target.closest('.swatch');
-  if (btn) applyColor(btn.dataset.color);
-});
-
-applyColor('#FFFFFF');   // initialise
-
-/* ── Button state ────────────────────────────── */
-function updateBtn() {
-  removeBtn.disabled = !selectedFile || processing;
-}
-
-/* ── Canvas composite ────────────────────────── */
-function composite(blob) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const objUrl = URL.createObjectURL(blob);
-    img.onload = () => {
-      const W = img.naturalWidth, H = img.naturalHeight;
-
-      // Large result canvas
-      resultCanvas.width  = W;
-      resultCanvas.height = H;
-      const rCtx = resultCanvas.getContext('2d');
-      rCtx.fillStyle = selectedColor;
-      rCtx.fillRect(0, 0, W, H);
-      rCtx.drawImage(img, 0, 0, W, H);
-
-      // Thumbnail (after-panel)
-      afterCanvas.width  = W;
-      afterCanvas.height = H;
-      const aCtx = afterCanvas.getContext('2d');
-      aCtx.clearRect(0, 0, W, H);
-      aCtx.fillStyle = selectedColor;
-      aCtx.fillRect(0, 0, W, H);
-      aCtx.drawImage(img, 0, 0, W, H);
-
-      finalDataURL = resultCanvas.toDataURL('image/png');
-      URL.revokeObjectURL(objUrl);
-      resolve();
-    };
-    img.onerror = () => { URL.revokeObjectURL(objUrl); reject(new Error('Image render failed')); };
-    img.src = objUrl;
-  });
-}
-
-/* ── Friendly network error message ──────────── */
-function friendlyError(err, status) {
-  if (err.name === 'TypeError' || err.message.toLowerCase().includes('fetch')) {
-    return 'Could not reach ClearBackdrop. Check your internet connection and try again.';
-  }
-  if (status === 429) return 'Rate limit reached (100/hr). Please wait a moment and try again.';
-  if (status === 413) return 'Image too large for the API. Try compressing the photo first.';
-  if (status >= 500)  return 'ClearBackdrop server error — please try again in a few seconds.';
-  return err.message || 'Background removal failed. Please try a different photo.';
-}
-
-/* ══════════════════════════════════════════════
-   MAIN: Remove Background
-══════════════════════════════════════════════ */
-removeBtn.addEventListener('click', async () => {
-  if (!selectedFile || processing) return;
-  processing = true;
-  removeBtn.disabled = true;
-  resultsWrap.classList.remove('visible');
-
-  let httpStatus = null;
-
-  try {
-    /* ── Step 1: Upload ── */
-    setProgress(1);
-    showStatus('loading', 'Uploading image…');
-
-    const form = new FormData();
-    form.append(IMAGE_FIELD, selectedFile, selectedFile.name);
-
-    let response;
-    try {
-      response = await fetch(API_ENDPOINT, {
-        method: 'POST',
-        body: form,
-        // No Authorization header needed — ClearBackdrop is free & keyless
-      });
-    } catch (netErr) {
-      throw Object.assign(netErr, { isFetch: true });
-    }
-
-    httpStatus = response.status;
-
-    /* ── Step 2: Remove background ── */
-    setProgress(2);
-    showStatus('loading', 'Removing background…');
-
-    if (!response.ok) {
-      let detail = '';
-      try { const j = await response.json(); detail = j.error || j.message || ''; } catch (_) {}
-      throw new Error(detail || `API error ${httpStatus}`);
-    }
-
-    /* ── Parse response ── */
-    const contentType = response.headers.get('content-type') || '';
-    let blob;
-
-    if (contentType.includes('application/json')) {
-      // Some APIs return JSON with a URL to the result image
-      const json = await response.json();
-      const imgUrl = json.url || json.result_url || json.output || json.image_url;
-      if (!imgUrl) throw new Error('API returned JSON but no image URL was found.');
-      const r2 = await fetch(imgUrl);
-      blob = await r2.blob();
-    } else {
-      // Direct binary PNG (ClearBackdrop's normal response)
-      blob = await response.blob();
-    }
-
-    if (!blob || blob.size < 100) {
-      throw new Error('The API returned an empty image. Please try again.');
-    }
-
-    /* ── Step 3: Composite ── */
-    setProgress(3);
-    showStatus('loading', 'Generating final image…');
-    transparentBlob = blob;
-
-    // Before preview
-    if (beforeImg.src && beforeImg.src.startsWith('blob:')) URL.revokeObjectURL(beforeImg.src);
-    beforeImg.src = URL.createObjectURL(selectedFile);
-
-    await composite(blob);
-
-    /* ── Done ── */
-    completeProgress();
-    resultsWrap.classList.add('visible');
-    showStatus('success', 'Done! Your passport photo is ready to download.');
-    setTimeout(() => {
-      resultsWrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 100);
-
-  } catch (err) {
-    resetProgress();
-    showStatus('error', friendlyError(err, httpStatus));
-    console.error('[PassportAI]', err);
-  } finally {
-    processing = false;
-    updateBtn();
-  }
-});
-
-/* ── Download ────────────────────────────────── */
-downloadBtn.addEventListener('click', () => {
-  if (!finalDataURL) return;
-  const a = document.createElement('a');
-  a.href     = finalDataURL;
-  a.download = 'passport-photo.png';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-});
-
-/* ── Reset ───────────────────────────────────── */
-resetBtn.addEventListener('click', () => {
-  selectedFile  = null;
-  transparentBlob = null;
-  finalDataURL  = null;
-  processing    = false;
-
-  fileInput.value = '';
-  previewImg.src  = '';
-  fileMetaText.textContent = '';
-
-  inputPreview.style.display      = 'none';
-  uploadPlaceholder.style.display = 'block';
-  uploadZone.classList.remove('has-file');
-
-  resultsWrap.classList.remove('visible');
-  hideStatus();
-  resetProgress();
-  updateBtn();
-
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-});
-</script>
-
+  <script src="script.js"></script>
 </body>
 </html>
