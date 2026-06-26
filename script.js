@@ -1,5 +1,5 @@
 const API_URL = "https://clearbackdrop.com/api/v1/remove-background";
-const PROXY_URL = "/api/remove-bg"; // change to your free proxy endpoint if needed
+const PROXY_URL = "/api/remove-bg";
 
 const els = {
   imageInput: document.getElementById("imageInput"),
@@ -26,8 +26,6 @@ const ctx = els.canvas.getContext("2d");
 let originalFile = null;
 let cutoutImage = null;
 let lastResultBlob = null;
-let lastSheetBlob = null;
-let objectUrlToRevoke = null;
 
 els.apiLabel.textContent = API_URL;
 els.proxyLabel.textContent = PROXY_URL;
@@ -139,16 +137,9 @@ async function removeBackgroundWithFallback(file) {
   } catch (directError) {
     console.warn("Direct request failed, trying proxy...", directError);
 
-    if (!PROXY_URL || PROXY_URL === "/api/remove-bg") {
-      // continue anyway; the endpoint can be replaced later
-    }
-
-    const proxyForm = new FormData();
-    proxyForm.append("image", file);
-
     const proxied = await fetch(PROXY_URL, {
       method: "POST",
-      body: proxyForm,
+      body: formData,
     });
 
     if (!proxied.ok) {
@@ -213,20 +204,6 @@ function enhanceCanvas(canvas, amount = 1.08) {
   return tmp;
 }
 
-function drawRoundedImage(ctx, img, x, y, w, h, radius = 24) {
-  ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(x + radius, y);
-  ctx.arcTo(x + w, y, x + w, y + h, radius);
-  ctx.arcTo(x + w, y + h, x, y + h, radius);
-  ctx.arcTo(x, y + h, x, y, radius);
-  ctx.arcTo(x, y, x + w, y, radius);
-  ctx.closePath();
-  ctx.clip();
-  ctx.drawImage(img, x, y, w, h);
-  ctx.restore();
-}
-
 function redraw() {
   const bg = els.bgColor.value;
   const copies = Math.max(1, Math.min(40, parseInt(els.copiesInput.value || "1", 10)));
@@ -264,9 +241,6 @@ function redraw() {
   sctx.drawImage(cutoutImage, 0, 0);
 
   const finalSource = els.enhancePhoto.checked ? enhanceCanvas(sourceCanvas) : sourceCanvas;
-  const img = new Image();
-  img.src = finalSource.toDataURL("image/png");
-
   const photoW = mmToPx(widthMM);
   const photoH = mmToPx(heightMM);
 
@@ -280,52 +254,41 @@ function redraw() {
   const startX = Math.round((pageW - (Math.min(finalCopies, cols) * photoW + (Math.min(finalCopies, cols) - 1) * gap)) / 2);
   const startY = margin;
 
-  const render = () => {
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, pageW, pageH);
+
+  for (let i = 0; i < finalCopies; i++) {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    if (row >= rows) break;
+
+    const x = startX + col * (photoW + gap);
+    const y = startY + row * (photoH + gap);
+
     ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, pageW, pageH);
+    ctx.fillRect(x, y, photoW, photoH);
 
-    ctx.strokeStyle = "rgba(0,0,0,0.08)";
+    const iw = finalSource.width;
+    const ih = finalSource.height;
+    const scale = Math.min(photoW / iw, photoH / ih) * 0.92;
+    const dw = iw * scale;
+    const dh = ih * scale;
+    const dx = x + (photoW - dw) / 2;
+    const dy = y + (photoH - dh) / 2;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y, photoW, photoH);
+    ctx.clip();
+    ctx.drawImage(finalSource, dx, dy, dw, dh);
+    ctx.restore();
+
+    ctx.strokeStyle = "rgba(0,0,0,0.10)";
     ctx.lineWidth = 2;
-
-    for (let i = 0; i < finalCopies; i++) {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      if (row >= rows) break;
-      const x = startX + col * (photoW + gap);
-      const y = startY + row * (photoH + gap);
-
-      // Fill photo background
-      ctx.fillStyle = bg;
-      ctx.fillRect(x, y, photoW, photoH);
-
-      // Draw subject centered and scaled
-      const iw = img.width || finalSource.width;
-      const ih = img.height || finalSource.height;
-      const scale = Math.min(photoW / iw, photoH / ih) * 0.92;
-      const dw = iw * scale;
-      const dh = ih * scale;
-      const dx = x + (photoW - dw) / 2;
-      const dy = y + (photoH - dh) / 2;
-
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(x, y, photoW, photoH);
-      ctx.clip();
-      ctx.drawImage(finalSource, dx, dy, dw, dh);
-      ctx.restore();
-
-      ctx.strokeStyle = "rgba(0,0,0,0.10)";
-      ctx.strokeRect(x + 0.5, y + 0.5, photoW - 1, photoH - 1);
-    }
-
-    els.previewInfo.textContent = `${finalCopies} copy${finalCopies > 1 ? "ies" : ""} on A4`;
-  };
-
-  if (img.complete) {
-    render();
-  } else {
-    img.onload = render;
+    ctx.strokeRect(x + 0.5, y + 0.5, photoW - 1, photoH - 1);
   }
+
+  els.previewInfo.textContent = `${finalCopies} copy${finalCopies > 1 ? "ies" : ""} on A4`;
 }
 
 async function downloadCutout() {
@@ -339,7 +302,6 @@ async function downloadSheet() {
   redraw();
   const blob = await new Promise(resolve => els.canvas.toBlob(resolve, "image/png"));
   if (!blob) return;
-  lastSheetBlob = blob;
   const url = URL.createObjectURL(blob);
   triggerDownload(url, "passport-sheet-a4.png");
   setTimeout(() => URL.revokeObjectURL(url), 2000);
@@ -354,9 +316,5 @@ function triggerDownload(url, filename) {
   a.remove();
 }
 
-function setInitialCanvas() {
-  redraw();
-  setStatus("Waiting for an image", 0);
-}
-
-setInitialCanvas();
+redraw();
+setStatus("Waiting for an image", 0);
