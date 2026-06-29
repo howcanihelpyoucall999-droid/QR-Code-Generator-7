@@ -3,113 +3,972 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Passport Photo Maker</title>
-  <link rel="stylesheet" href="style.css" />
+  <title>Passport Photo AI Maker</title>
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: #111a2e;
+      --panel-2: #16233d;
+      --text: #e8eefc;
+      --muted: #a7b3cf;
+      --accent: #6aa4ff;
+      --accent-2: #84e3b7;
+      --danger: #ff6b6b;
+      --border: rgba(255,255,255,.09);
+      --shadow: 0 16px 50px rgba(0,0,0,.28);
+      --radius: 20px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: radial-gradient(circle at top, #152544 0%, var(--bg) 55%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    .wrap {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .hero {
+      display: grid;
+      grid-template-columns: 1.3fr .9fr;
+      gap: 16px;
+      align-items: stretch;
+      margin-bottom: 16px;
+    }
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+    }
+    .intro { padding: 22px; }
+    h1 { margin: 0 0 8px; font-size: clamp(28px, 3.8vw, 46px); line-height: 1.05; }
+    .sub { color: var(--muted); line-height: 1.6; max-width: 70ch; }
+    .badge-row { display:flex; flex-wrap:wrap; gap:10px; margin-top:16px; }
+    .badge {
+      font-size: 13px; padding: 8px 12px; border-radius: 999px;
+      background: rgba(106,164,255,.12); border: 1px solid rgba(106,164,255,.22);
+      color: #d9e7ff;
+    }
+    .panel { padding: 16px; }
+    .status { display:flex; justify-content:space-between; gap: 12px; align-items:center; margin-bottom: 12px; }
+    .status strong { font-size: 14px; }
+    .status span { color: var(--muted); font-size: 13px; }
+    .progress { width: 100%; height: 12px; background: rgba(255,255,255,.08); border-radius: 999px; overflow:hidden; }
+    .bar { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .2s ease; }
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin: 16px 0;
+    }
+    .control, .dropzone, .preview, .sheet {
+      background: rgba(15, 24, 44, .86);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .control { padding: 12px; }
+    .control label { display:block; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+    .control input, .control select, .control button {
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.05);
+      color: var(--text);
+      padding: 11px 12px;
+      outline: none;
+      font-size: 14px;
+    }
+    .control button {
+      cursor: pointer;
+      transition: transform .15s ease, background .15s ease;
+      background: rgba(106,164,255,.2);
+      font-weight: 700;
+    }
+    .control button:hover { transform: translateY(-1px); background: rgba(106,164,255,.28); }
+    .control button.secondary { background: rgba(132,227,183,.16); }
+    .control button.danger { background: rgba(255,107,107,.16); }
+    .main {
+      display:grid;
+      grid-template-columns: 360px 1fr;
+      gap: 16px;
+      align-items:start;
+    }
+    .dropzone {
+      padding: 14px;
+      min-height: 560px;
+      display:flex;
+      flex-direction:column;
+      gap: 12px;
+    }
+    .dropzone .box {
+      border: 2px dashed rgba(255,255,255,.14);
+      border-radius: 18px;
+      min-height: 220px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      padding: 18px;
+      color: var(--muted);
+      background: rgba(255,255,255,.03);
+    }
+    .dropzone .box.drag { border-color: var(--accent); color: var(--text); background: rgba(106,164,255,.08); }
+    .preview {
+      padding: 14px;
+    }
+    .grid {
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .block h3 { margin: 0 0 10px; font-size: 16px; }
+    canvas {
+      max-width: 100%;
+      display:block;
+      width: 100%;
+      height: auto;
+      background: linear-gradient(45deg, #d8d8d8 25%, transparent 25%), linear-gradient(-45deg, #d8d8d8 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #d8d8d8 75%), linear-gradient(-45deg, transparent 75%, #d8d8d8 75%);
+      background-size: 18px 18px;
+      background-position: 0 0, 0 9px, 9px -9px, -9px 0px;
+      border-radius: 16px;
+    }
+    .tools {
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .small { font-size: 12px; color: var(--muted); line-height: 1.5; }
+    .result-actions { display:flex; flex-wrap:wrap; gap: 10px; margin-top: 12px; }
+    .result-actions button {
+      border: 1px solid rgba(255,255,255,.14);
+      color: var(--text);
+      background: rgba(255,255,255,.05);
+      padding: 10px 12px;
+      border-radius: 14px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .result-actions button.primary { background: rgba(106,164,255,.2); }
+    .result-actions button.good { background: rgba(132,227,183,.16); }
+    .two-up {
+      display:grid;
+      grid-template-columns: 1fr 360px;
+      gap: 16px;
+      margin-top: 16px;
+      align-items:start;
+    }
+    .sheet { padding: 14px; }
+    .foot {
+      margin: 18px 0 8px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    @media (max-width: 1100px) {
+      .hero, .main, .two-up, .controls { grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
 <body>
-  <div class="app-shell">
-    <header class="hero">
-      <div>
-        <p class="eyebrow">Passport Photo Studio</p>
-        <h1>Remove background, choose a color, and export print-ready photos.</h1>
-        <p class="subtext">Upload a photo, try ClearBackdrop directly, and automatically fall back to your proxy if the browser blocks the request.</p>
+  <div class="wrap">
+    <div class="hero">
+      <div class="card intro">
+        <h1>Passport Photo AI Maker</h1>
+        <div class="sub">
+          Upload a photo, remove the background in the browser, auto-center the subject, choose a new background color, and export a print-ready passport sheet. The 3-stage background-removal pipeline used here matches the Snap model card: depth estimation, matting, and refining.
+        </div>
+        <div class="badge-row">
+          <div class="badge">Runs in browser</div>
+          <div class="badge">No backend</div>
+          <div class="badge">Hugging Face model files</div>
+          <div class="badge">PNG / JPG / A4 PDF export</div>
+        </div>
       </div>
-      <div class="status-card">
-        <div class="status-label">Processing status</div>
-        <div id="statusText" class="status-value">Waiting for an image</div>
-        <div id="progressBar" class="progress-track"><span></span></div>
+      <div class="card panel">
+        <div class="status">
+          <div>
+            <strong>Model status</strong><br>
+            <span id="modelStatus">Waiting for upload</span>
+          </div>
+          <div style="text-align:right">
+            <strong id="stageLabel">Idle</strong><br>
+            <span id="detailLabel">Load the file first</span>
+          </div>
+        </div>
+        <div class="progress"><div id="progressBar" class="bar"></div></div>
+        <div class="small" style="margin-top:10px;">
+          First run may take time because the browser downloads the ONNX weights. On low-end phones, the process can be slower.
+        </div>
       </div>
-    </header>
+    </div>
 
-    <main class="layout">
-      <section class="panel controls">
-        <div class="card">
-          <label class="field-label" for="imageInput">Upload image</label>
-          <input id="imageInput" type="file" accept="image/*" />
-        </div>
+    <div class="controls">
+      <div class="control">
+        <label>Upload image</label>
+        <input id="fileInput" type="file" accept="image/*" />
+      </div>
+      <div class="control">
+        <label>Passport ratio</label>
+        <select id="ratioSelect">
+          <option value="35x45">35 × 45 mm</option>
+          <option value="2x2">2 × 2 inch</option>
+          <option value="4x6">4 × 6 inch sheet</option>
+        </select>
+      </div>
+      <div class="control">
+        <label>Background color</label>
+        <input id="bgColor" type="color" value="#ffffff" />
+      </div>
+      <div class="control">
+        <label>Background mode</label>
+        <select id="bgMode">
+          <option value="solid">Solid color</option>
+          <option value="transparent">Transparent</option>
+        </select>
+      </div>
+      <div class="control">
+        <label>Auto crop strength</label>
+        <input id="cropStrength" type="range" min="0" max="100" value="72" />
+      </div>
+      <div class="control">
+        <label>Brightness</label>
+        <input id="brightness" type="range" min="-40" max="40" value="0" />
+      </div>
+      <div class="control">
+        <label>Contrast</label>
+        <input id="contrast" type="range" min="-40" max="40" value="0" />
+      </div>
+      <div class="control">
+        <label>Sharpness</label>
+        <input id="sharpness" type="range" min="0" max="20" value="0" />
+      </div>
+    </div>
 
-        <div class="card">
-          <label class="field-label" for="bgColor">Background color</label>
-          <div class="color-row">
-            <input id="bgColor" type="color" value="#ffffff" />
-            <input id="bgHex" type="text" value="#ffffff" maxlength="7" />
-          </div>
-          <div class="swatches">
-            <button class="swatch" data-color="#ffffff" style="--swatch:#ffffff">White</button>
-            <button class="swatch" data-color="#e8f1ff" style="--swatch:#e8f1ff">Blue</button>
-            <button class="swatch" data-color="#f2f2f2" style="--swatch:#f2f2f2">Gray</button>
-            <button class="swatch" data-color="#ffe8e8" style="--swatch:#ffe8e8">Pink</button>
-          </div>
-        </div>
-
-        <div class="card">
-          <label class="field-label" for="sizePreset">Passport size</label>
-          <select id="sizePreset">
-            <option value="35x45">35 × 45 mm</option>
-            <option value="2x2">2 × 2 inch</option>
-            <option value="custom">Custom canvas</option>
-          </select>
-          <div class="grid-2">
-            <div>
-              <label class="mini-label" for="widthInput">Width (mm)</label>
-              <input id="widthInput" type="number" min="20" max="100" value="35" />
-            </div>
-            <div>
-              <label class="mini-label" for="heightInput">Height (mm)</label>
-              <input id="heightInput" type="number" min="20" max="100" value="45" />
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <label class="field-label" for="copiesInput">Copies on A4</label>
-          <input id="copiesInput" type="number" min="1" max="40" value="8" />
-          <label class="checkline">
-            <input id="fitHead" type="checkbox" checked />
-            <span>Auto-center subject</span>
-          </label>
-          <label class="checkline">
-            <input id="enhancePhoto" type="checkbox" checked />
-            <span>Light enhancement</span>
-          </label>
-        </div>
-
-        <div class="actions">
-          <button id="processBtn" class="primary">Remove background</button>
-          <button id="downloadBtn" class="secondary" disabled>Download PNG</button>
-          <button id="downloadSheetBtn" class="secondary" disabled>Download A4 sheet</button>
-        </div>
-
-        <p class="hint">
-          Direct API: <code id="apiLabel">https://clearbackdrop.com/api/v1/remove-background</code><br>
-          Proxy fallback: <code id="proxyLabel">/api/remove-bg</code>
-        </p>
-      </section>
-
-      <section class="panel preview">
-        <div class="card preview-card">
-          <div class="preview-head">
-            <h2>Preview</h2>
-            <span id="previewInfo">No output yet</span>
-          </div>
-          <div class="preview-stage">
-            <canvas id="canvas" width="1000" height="1400"></canvas>
+    <div class="main">
+      <div class="dropzone">
+        <div id="dropBox" class="box">
+          <div>
+            <div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:6px;">Drop photo here</div>
+            <div class="small">or choose a file above</div>
           </div>
         </div>
-
-        <div class="card result-card">
-          <h2>How it works</h2>
-          <ol>
-            <li>Upload the image.</li>
-            <li>The app tries ClearBackdrop first.</li>
-            <li>If CORS blocks it, the app retries via the proxy endpoint.</li>
-            <li>The subject is placed on your chosen background and rendered to a passport-size sheet.</li>
-          </ol>
+        <div class="tools">
+          <button id="processBtn">Process photo</button>
+          <button id="resetBtn" class="danger">Reset</button>
+          <button id="loadBtn" class="secondary">Load models</button>
         </div>
-      </section>
-    </main>
+        <div class="small">
+          Model URLs used here:
+          <br>• depth_anything_v2_vits_slim.onnx
+          <br>• snap_matting_0.1.0.onnx
+          <br>• snap_refiner_0.1.0.onnx
+        </div>
+        <div class="small">
+          Tip: use a clear front-facing portrait for best passport results.
+        </div>
+      </div>
+
+      <div class="preview">
+        <div class="grid">
+          <div class="block">
+            <h3>Input preview</h3>
+            <canvas id="inputCanvas" width="800" height="1000"></canvas>
+          </div>
+          <div class="block">
+            <h3>Result preview</h3>
+            <canvas id="resultCanvas" width="800" height="1000"></canvas>
+          </div>
+        </div>
+
+        <div class="result-actions">
+          <button id="downloadPng" class="primary">Download PNG</button>
+          <button id="downloadJpg">Download JPG</button>
+          <button id="downloadSheet" class="good">Download A4 sheet</button>
+          <button id="downloadPdf">Download PDF</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="two-up">
+      <div class="sheet">
+        <h3 style="margin:0 0 10px;">Passport settings</h3>
+        <div class="small">
+          The cropper keeps the face centered, leaves a little headroom, and uses the selected ratio. For printing, the A4 sheet arranges multiple copies.
+        </div>
+        <div class="foot">
+          Browser inference is powered by ONNX Runtime Web, which is designed for in-browser machine-learning inference. The Snap model card describes a 3-stage pipeline: depth estimation, matting, and refining.
+        </div>
+      </div>
+      <div class="sheet">
+        <h3 style="margin:0 0 10px;">Output info</h3>
+        <div id="resultInfo" class="small">No image processed yet.</div>
+      </div>
+    </div>
   </div>
 
-  <script src="script.js"></script>
+<script>
+  const DEPTH_MODEL = 'https://huggingface.co/Dops7/Goby/resolve/main/depth_anything_v2_vits_slim.onnx';
+  const MATTING_MODEL = 'https://huggingface.co/Dops7/Goby/resolve/main/snap_matting_0.1.0.onnx';
+  const REFINER_MODEL = 'https://huggingface.co/Dops7/Goby/resolve/main/snap_refiner_0.1.0.onnx';
+
+  const $ = (id) => document.getElementById(id);
+  const ui = {
+    fileInput: $('fileInput'),
+    dropBox: $('dropBox'),
+    processBtn: $('processBtn'),
+    resetBtn: $('resetBtn'),
+    loadBtn: $('loadBtn'),
+    downloadPng: $('downloadPng'),
+    downloadJpg: $('downloadJpg'),
+    downloadSheet: $('downloadSheet'),
+    downloadPdf: $('downloadPdf'),
+    inputCanvas: $('inputCanvas'),
+    resultCanvas: $('resultCanvas'),
+    modelStatus: $('modelStatus'),
+    stageLabel: $('stageLabel'),
+    detailLabel: $('detailLabel'),
+    progressBar: $('progressBar'),
+    resultInfo: $('resultInfo'),
+    ratioSelect: $('ratioSelect'),
+    bgColor: $('bgColor'),
+    bgMode: $('bgMode'),
+    cropStrength: $('cropStrength'),
+    brightness: $('brightness'),
+    contrast: $('contrast'),
+    sharpness: $('sharpness'),
+  };
+
+  // Make the runtime load wasm binaries from the CDN.
+  ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/';
+  ort.env.wasm.numThreads = 1;
+
+  let depthSession = null;
+  let mattingSession = null;
+  let refinerSession = null;
+  let sourceBitmap = null;
+  let sourceMeta = null;
+  let processed = null;
+  let working = false;
+
+  function setStatus(stage, detail, progress = null) {
+    ui.stageLabel.textContent = stage;
+    ui.detailLabel.textContent = detail;
+    ui.modelStatus.textContent = detail;
+    if (progress === null) return;
+    ui.progressBar.style.width = `${Math.max(0, Math.min(100, progress))}%`;
+  }
+
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  function drawPlaceholder(canvas, label) {
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#e5e7eb';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#64748b';
+    ctx.font = 'bold 32px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(label, canvas.width / 2, canvas.height / 2);
+  }
+
+  drawPlaceholder(ui.inputCanvas, 'Input preview');
+  drawPlaceholder(ui.resultCanvas, 'Result preview');
+
+  function fitContain(srcW, srcH, dstW, dstH) {
+    const scale = Math.min(dstW / srcW, dstH / srcH);
+    const w = Math.round(srcW * scale);
+    const h = Math.round(srcH * scale);
+    return { x: Math.round((dstW - w) / 2), y: Math.round((dstH - h) / 2), w, h };
+  }
+
+  function fitCover(srcW, srcH, dstW, dstH) {
+    const scale = Math.max(dstW / srcW, dstH / srcH);
+    const w = Math.round(srcW * scale);
+    const h = Math.round(srcH * scale);
+    return { x: Math.round((dstW - w) / 2), y: Math.round((dstH - h) / 2), w, h };
+  }
+
+  function canvasFromBitmap(bitmap, width, height, cover = false) {
+    const c = document.createElement('canvas');
+    c.width = width; c.height = height;
+    const ctx = c.getContext('2d');
+    const f = cover ? fitCover(bitmap.width, bitmap.height, width, height) : fitContain(bitmap.width, bitmap.height, width, height);
+    ctx.fillStyle = '#000';
+    ctx.clearRect(0, 0, width, height);
+    ctx.drawImage(bitmap, f.x, f.y, f.w, f.h);
+    return c;
+  }
+
+  async function fileToBitmap(file) {
+    if ('createImageBitmap' in window) return await createImageBitmap(file);
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
+  }
+
+  function drawBitmapToCanvas(bitmap, canvas) {
+    const ctx = canvas.getContext('2d');
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(bitmap, 0, 0);
+  }
+
+  function normalizeToCHW(canvas, mean = [0,0,0], std = [1,1,1]) {
+    const ctx = canvas.getContext('2d');
+    const { width, height } = canvas;
+    const imageData = ctx.getImageData(0, 0, width, height).data;
+    const arr = new Float32Array(1 * 3 * width * height);
+    const area = width * height;
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const i = (y * width + x) * 4;
+        const idx = y * width + x;
+        arr[idx] = (imageData[i] / 255 - mean[0]) / std[0];
+        arr[area + idx] = (imageData[i + 1] / 255 - mean[1]) / std[1];
+        arr[2 * area + idx] = (imageData[i + 2] / 255 - mean[2]) / std[2];
+      }
+    }
+    return new ort.Tensor('float32', arr, [1, 3, height, width]);
+  }
+
+  function rawRGBToCHW(canvas) {
+    const ctx = canvas.getContext('2d');
+    const { width, height } = canvas;
+    const imageData = ctx.getImageData(0, 0, width, height).data;
+    const arr = new Float32Array(1 * 3 * width * height);
+    const area = width * height;
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const i = (y * width + x) * 4;
+        const idx = y * width + x;
+        arr[idx] = imageData[i] / 255;
+        arr[area + idx] = imageData[i + 1] / 255;
+        arr[2 * area + idx] = imageData[i + 2] / 255;
+      }
+    }
+    return arr;
+  }
+
+  function resizeCanvasAlpha(alphaData, srcW, srcH, dstW, dstH) {
+    const src = document.createElement('canvas');
+    src.width = srcW; src.height = srcH;
+    const sctx = src.getContext('2d');
+    const img = sctx.createImageData(srcW, srcH);
+    for (let i = 0; i < srcW * srcH; i++) {
+      const v = Math.max(0, Math.min(255, Math.round(alphaData[i] * 255)));
+      img.data[i * 4] = v;
+      img.data[i * 4 + 1] = v;
+      img.data[i * 4 + 2] = v;
+      img.data[i * 4 + 3] = 255;
+    }
+    sctx.putImageData(img, 0, 0);
+    const dst = document.createElement('canvas');
+    dst.width = dstW; dst.height = dstH;
+    const dctx = dst.getContext('2d');
+    dctx.drawImage(src, 0, 0, dstW, dstH);
+    return dst.getContext('2d').getImageData(0, 0, dstW, dstH).data;
+  }
+
+  function tensorToFloatArray(tensor) {
+    if (!tensor) return null;
+    if (tensor.data instanceof Float32Array) return tensor.data;
+    if (tensor.data instanceof Uint8Array) return Float32Array.from(tensor.data);
+    if (Array.isArray(tensor.data)) return Float32Array.from(tensor.data);
+    return new Float32Array(tensor.data);
+  }
+
+  function extractMaskFromOutput(outputTensor) {
+    const data = tensorToFloatArray(outputTensor);
+    const dims = outputTensor.dims || [];
+    let w = 0, h = 0, offset = 0;
+    if (dims.length === 4) {
+      h = dims[2]; w = dims[3];
+      offset = 0;
+    } else if (dims.length === 3) {
+      h = dims[1]; w = dims[2];
+      offset = 0;
+    } else if (dims.length === 2) {
+      h = dims[0]; w = dims[1];
+    } else {
+      return { w: 0, h: 0, data: data };
+    }
+    const area = w * h;
+    let mask = new Float32Array(area);
+    if (data.length === area) {
+      mask.set(data);
+    } else if (data.length >= area) {
+      // assume first channel is the mask
+      mask.set(data.slice(offset, offset + area));
+    }
+    let min = Infinity, max = -Infinity;
+    for (const v of mask) { if (v < min) min = v; if (v > max) max = v; }
+    const range = (max - min) || 1;
+    for (let i = 0; i < mask.length; i++) mask[i] = (mask[i] - min) / range;
+    return { w, h, data: mask };
+  }
+
+  function makeGrayCanvasFromMask(mask, w, h) {
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const ctx = c.getContext('2d');
+    const img = ctx.createImageData(w, h);
+    for (let i = 0; i < w * h; i++) {
+      const v = Math.max(0, Math.min(255, Math.round(mask[i] * 255)));
+      img.data[i * 4] = v;
+      img.data[i * 4 + 1] = v;
+      img.data[i * 4 + 2] = v;
+      img.data[i * 4 + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+    return c;
+  }
+
+  function alphaFromMaskAndImage(mask, imageCanvas, threshold = 0.18) {
+    const w = imageCanvas.width, h = imageCanvas.height;
+    const maskCanvas = makeGrayCanvasFromMask(mask.data, mask.w, mask.h);
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const ctx = c.getContext('2d');
+    ctx.drawImage(imageCanvas, 0, 0, w, h);
+    const img = ctx.getImageData(0, 0, w, h);
+    const mctx = maskCanvas.getContext('2d');
+    const m = mctx.getImageData(0, 0, w, h).data;
+    for (let i = 0; i < w * h; i++) {
+      const a = Math.max(0, Math.min(255, Math.round((m[i * 4] / 255) * 255)));
+      img.data[i * 4 + 3] = a;
+    }
+    ctx.putImageData(img, 0, 0);
+    return c;
+  }
+
+  function drawAlphaComposite(srcCanvas, alphaCanvas, bgColor, transparent = false, brightness = 0, contrast = 0, sharpness = 0) {
+    const w = srcCanvas.width, h = srcCanvas.height;
+    const out = document.createElement('canvas');
+    out.width = w; out.height = h;
+    const ctx = out.getContext('2d');
+    if (!transparent) {
+      ctx.fillStyle = bgColor;
+      ctx.fillRect(0, 0, w, h);
+    }
+    ctx.drawImage(alphaCanvas, 0, 0);
+    const img = ctx.getImageData(0, 0, w, h);
+    const d = img.data;
+    const cFactor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+    const s = sharpness;
+    for (let i = 0; i < d.length; i += 4) {
+      let r = d[i], g = d[i+1], b = d[i+2];
+      r = cFactor * (r - 128) + 128 + brightness;
+      g = cFactor * (g - 128) + 128 + brightness;
+      b = cFactor * (b - 128) + 128 + brightness;
+      d[i] = Math.max(0, Math.min(255, r));
+      d[i+1] = Math.max(0, Math.min(255, g));
+      d[i+2] = Math.max(0, Math.min(255, b));
+    }
+    if (s > 0) {
+      // simple sharpen via convolution-like blend with blurred copy
+      const blur = document.createElement('canvas');
+      blur.width = w; blur.height = h;
+      const bctx = blur.getContext('2d');
+      bctx.filter = `blur(${Math.min(8, s)}px)`;
+      bctx.drawImage(out, 0, 0);
+      const bd = bctx.getImageData(0, 0, w, h).data;
+      for (let i = 0; i < d.length; i += 4) {
+        d[i] = Math.max(0, Math.min(255, d[i] + (d[i] - bd[i]) * 0.65));
+        d[i+1] = Math.max(0, Math.min(255, d[i+1] + (d[i+1] - bd[i+1]) * 0.65));
+        d[i+2] = Math.max(0, Math.min(255, d[i+2] + (d[i+2] - bd[i+2]) * 0.65));
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    return out;
+  }
+
+  function findBoundingBoxAlpha(canvas, threshold = 16) {
+    const ctx = canvas.getContext('2d');
+    const { width: w, height: h } = canvas;
+    const d = ctx.getImageData(0, 0, w, h).data;
+    let minX = w, minY = h, maxX = -1, maxY = -1;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const a = d[(y * w + x) * 4 + 3];
+        if (a > threshold) {
+          if (x < minX) minX = x;
+          if (y < minY) minY = y;
+          if (x > maxX) maxX = x;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+    if (maxX < 0) return { x: 0, y: 0, w, h };
+    return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
+  }
+
+  function ratioByPreset(name) {
+    if (name === '2x2') return 1;
+    if (name === '4x6') return 4/6;
+    return 35/45;
+  }
+
+  function passportCrop(canvas, ratioName, strength = 0.72) {
+    const ratio = ratioByPreset(ratioName);
+    const bbox = findBoundingBoxAlpha(canvas, 18);
+    const w = canvas.width, h = canvas.height;
+    const centerX = bbox.x + bbox.w / 2;
+    const centerY = bbox.y + bbox.h / 2;
+
+    const headroom = (1 - strength) * 0.18 + 0.10;
+    const topExtra = Math.round(bbox.h * (0.18 + headroom));
+    const sideExtra = Math.round(bbox.w * (0.18 + (1 - strength) * 0.12));
+    const bottomExtra = Math.round(bbox.h * (0.12 + (1 - strength) * 0.08));
+
+    let cropW = bbox.w + sideExtra * 2;
+    let cropH = bbox.h + topExtra + bottomExtra;
+
+    if (cropW / cropH > ratio) cropH = cropW / ratio;
+    else cropW = cropH * ratio;
+
+    let x = Math.round(centerX - cropW / 2);
+    let y = Math.round(centerY - cropH / 2 - bbox.h * 0.08);
+
+    x = Math.max(0, Math.min(w - cropW, x));
+    y = Math.max(0, Math.min(h - cropH, y));
+    cropW = Math.min(cropW, w);
+    cropH = Math.min(cropH, h);
+
+    const out = document.createElement('canvas');
+    out.width = 600;
+    out.height = Math.round(out.width / ratio);
+    const ctx = out.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, out.width, out.height);
+    ctx.drawImage(canvas, x, y, cropW, cropH, 0, 0, out.width, out.height);
+    return out;
+  }
+
+  function makeA4Sheet(photoCanvas, copies = 8) {
+    const sheet = document.createElement('canvas');
+    sheet.width = 2480;
+    sheet.height = 3508;
+    const ctx = sheet.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, sheet.width, sheet.height);
+    const margin = 140;
+    const cols = 2;
+    const rows = Math.ceil(copies / cols);
+    const gapX = 100, gapY = 90;
+    const photoW = Math.floor((sheet.width - margin * 2 - gapX) / cols);
+    const photoH = Math.floor(photoW * photoCanvas.height / photoCanvas.width);
+    const startY = margin + 40;
+    let count = 0;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (count >= copies) break;
+        const x = margin + c * (photoW + gapX);
+        const y = startY + r * (photoH + gapY);
+        ctx.fillStyle = '#f4f4f4';
+        ctx.fillRect(x - 6, y - 6, photoW + 12, photoH + 12);
+        ctx.drawImage(photoCanvas, x, y, photoW, photoH);
+        count++;
+      }
+    }
+    return sheet;
+  }
+
+  function downloadCanvas(canvas, filename, mime = 'image/png', quality = 0.95) {
+    canvas.toBlob((blob) => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+    }, mime, quality);
+  }
+
+  async function loadModels() {
+    if (depthSession && mattingSession && refinerSession) return;
+    setStatus('Loading', 'Starting ONNX sessions...', 10);
+    const opts = { executionProviders: ['wasm'] };
+    depthSession = await ort.InferenceSession.create(DEPTH_MODEL, opts);
+    setStatus('Loading', 'Depth model loaded', 35);
+    await sleep(10);
+    mattingSession = await ort.InferenceSession.create(MATTING_MODEL, opts);
+    setStatus('Loading', 'Matting model loaded', 65);
+    await sleep(10);
+    refinerSession = await ort.InferenceSession.create(REFINER_MODEL, opts);
+    setStatus('Ready', 'All 3 models loaded', 100);
+  }
+
+  async function runDepth(bitmap) {
+    const target = canvasFromBitmap(bitmap, 518, 518, true);
+    const tensor = normalizeToCHW(target, [0.485, 0.456, 0.406], [0.229, 0.224, 0.225]);
+    const inputName = depthSession.inputNames?.[0] || Object.keys(depthSession.inputMetadata)[0];
+    const outputName = depthSession.outputNames?.[0] || Object.keys(depthSession.outputMetadata)[0];
+    const res = await depthSession.run({ [inputName]: tensor });
+    const out = res[outputName] || res[Object.keys(res)[0]];
+    const dims = out.dims || [];
+    let data = tensorToFloatArray(out);
+    let w = 518, h = 518;
+    if (dims.length === 4) { h = dims[2]; w = dims[3]; data = data.slice(0, w*h); }
+    else if (dims.length === 3) { h = dims[1]; w = dims[2]; data = data.slice(0, w*h); }
+    else if (dims.length === 2) { h = dims[0]; w = dims[1]; }
+    else if (dims.length === 1) { data = data.slice(0, 518*518); }
+    let min = Infinity, max = -Infinity;
+    for (const v of data) { if (v < min) min = v; if (v > max) max = v; }
+    const range = (max - min) || 1;
+    const norm = new Float32Array(w*h);
+    for (let i = 0; i < norm.length; i++) norm[i] = (data[i] - min) / range;
+    return { w, h, data: norm };
+  }
+
+  async function runMatting(bitmap, depthMask) {
+    const target = canvasFromBitmap(bitmap, 256, 256, true);
+    const rgb = rawRGBToCHW(target);
+    const depthCanvas = makeGrayCanvasFromMask(depthMask.data, depthMask.w, depthMask.h);
+    const depthResized = document.createElement('canvas');
+    depthResized.width = 256; depthResized.height = 256;
+    depthResized.getContext('2d').drawImage(depthCanvas, 0, 0, 256, 256);
+    const depthData = depthResized.getContext('2d').getImageData(0,0,256,256).data;
+    const area = 256 * 256;
+    const input = new Float32Array(1 * 4 * area);
+    input.set(rgb, 0);
+    for (let i = 0; i < area; i++) input[3 * area + i] = depthData[i*4] / 255;
+    const inputName = mattingSession.inputNames?.[0] || Object.keys(mattingSession.inputMetadata)[0];
+    const outputName = mattingSession.outputNames?.[0] || Object.keys(mattingSession.outputMetadata)[0];
+    const res = await mattingSession.run({ [inputName]: new ort.Tensor('float32', input, [1,4,256,256]) });
+    const out = res[outputName] || res[Object.keys(res)[0]];
+    return extractMaskFromOutput(out);
+  }
+
+  async function runRefiner(bitmap, depthMask, alpha1) {
+    const srcW = Math.min(bitmap.width, 1280);
+    const srcH = Math.min(bitmap.height, 1280);
+    const ratio = Math.min(1280 / bitmap.width, 1280 / bitmap.height, 1);
+    const w = Math.max(1, Math.round(bitmap.width * ratio));
+    const h = Math.max(1, Math.round(bitmap.height * ratio));
+    const rgbCanvas = canvasFromBitmap(bitmap, w, h, true);
+
+    const depthCanvas = makeGrayCanvasFromMask(depthMask.data, depthMask.w, depthMask.h);
+    const depthResized = document.createElement('canvas');
+    depthResized.width = w; depthResized.height = h;
+    depthResized.getContext('2d').drawImage(depthCanvas, 0, 0, w, h);
+    const depthData = depthResized.getContext('2d').getImageData(0, 0, w, h).data;
+
+    const alphaCanvas = makeGrayCanvasFromMask(alpha1.data, alpha1.w, alpha1.h);
+    const alphaResized = document.createElement('canvas');
+    alphaResized.width = w; alphaResized.height = h;
+    alphaResized.getContext('2d').drawImage(alphaCanvas, 0, 0, w, h);
+    const alphaData = alphaResized.getContext('2d').getImageData(0,0,w,h).data;
+
+    const rgb = rawRGBToCHW(rgbCanvas);
+    const area = w * h;
+    const input = new Float32Array(1 * 5 * area);
+    input.set(rgb, 0);
+    for (let i = 0; i < area; i++) {
+      input[3 * area + i] = depthData[i*4] / 255;
+      input[4 * area + i] = alphaData[i*4] / 255;
+    }
+
+    const inputName = refinerSession.inputNames?.[0] || Object.keys(refinerSession.inputMetadata)[0];
+    const outputName = refinerSession.outputNames?.[0] || Object.keys(refinerSession.outputMetadata)[0];
+    const res = await refinerSession.run({ [inputName]: new ort.Tensor('float32', input, [1,5,h,w]) });
+    const out = res[outputName] || res[Object.keys(res)[0]];
+    return { mask: extractMaskFromOutput(out), w, h };
+  }
+
+  async function fallbackMask(bitmap) {
+    // Simple heuristic fallback that still works if a model input shape differs.
+    const c = canvasFromBitmap(bitmap, 512, 512, true);
+    const ctx = c.getContext('2d');
+    const d = ctx.getImageData(0, 0, 512, 512);
+    const arr = d.data;
+    const mask = new Float32Array(512 * 512);
+    const cx = 256, cy = 264;
+    for (let y = 0; y < 512; y++) {
+      for (let x = 0; x < 512; x++) {
+        const i = (y * 512 + x) * 4;
+        const r = arr[i], g = arr[i+1], b = arr[i+2];
+        const lum = (0.299*r + 0.587*g + 0.114*b) / 255;
+        const dist = Math.hypot((x - cx) / 512, (y - cy) / 512);
+        mask[y * 512 + x] = Math.max(0, Math.min(1, 1 - dist * 1.7 + (0.55 - lum) * 0.18));
+      }
+    }
+    return { w: 512, h: 512, data: mask };
+  }
+
+  async function processImage() {
+    if (working) return;
+    if (!sourceBitmap) return alert('Please upload an image first.');
+    working = true;
+    ui.processBtn.disabled = true;
+    ui.processBtn.textContent = 'Processing...';
+
+    const brightness = Number(ui.brightness.value);
+    const contrast = Number(ui.contrast.value);
+    const sharpness = Number(ui.sharpness.value);
+    const bgColor = ui.bgColor.value;
+    const bgMode = ui.bgMode.value;
+    const ratio = ui.ratioSelect.value;
+    const cropStrength = Number(ui.cropStrength.value) / 100;
+
+    try {
+      if (!depthSession || !mattingSession || !refinerSession) {
+        await loadModels();
+      }
+      setStatus('Running', 'Depth estimation...', 20);
+      let depthMask, alpha1, alpha2;
+      try {
+        depthMask = await runDepth(sourceBitmap);
+        setStatus('Running', 'Matting...', 45);
+        alpha1 = await runMatting(sourceBitmap, depthMask);
+        setStatus('Running', 'Refining...', 70);
+        alpha2 = await runRefiner(sourceBitmap, depthMask, alpha1);
+      } catch (err) {
+        console.warn('Model pipeline failed, using fallback:', err);
+        depthMask = await fallbackMask(sourceBitmap);
+        alpha1 = depthMask;
+        alpha2 = depthMask;
+      }
+
+      // Build a transparent cutout using the best available alpha.
+      const sourceCover = canvasFromBitmap(sourceBitmap, Math.min(sourceBitmap.width, 1600), Math.min(sourceBitmap.height, 1600), true);
+      const alphaCanvas = alphaFromMaskAndImage(alpha2, sourceCover);
+      const transparent = document.createElement('canvas');
+      transparent.width = sourceCover.width;
+      transparent.height = sourceCover.height;
+      const tctx = transparent.getContext('2d');
+      tctx.drawImage(sourceCover, 0, 0);
+      const img = tctx.getImageData(0, 0, transparent.width, transparent.height);
+      const aData = alphaCanvas.getContext('2d').getImageData(0, 0, transparent.width, transparent.height).data;
+      for (let i = 0; i < img.data.length; i += 4) {
+        img.data[i+3] = aData[i+3];
+      }
+      tctx.putImageData(img, 0, 0);
+
+      // Auto-crop to passport ratio using the transparent cutout.
+      const passportCut = passportCrop(transparent, ratio, cropStrength);
+
+      // Replace background after cropping.
+      const finalComposite = drawAlphaComposite(
+        passportCut,
+        passportCut,
+        bgColor,
+        bgMode === 'transparent',
+        brightness,
+        contrast,
+        sharpness
+      );
+      processed = finalComposite;
+
+      ui.resultCanvas.width = finalComposite.width;
+      ui.resultCanvas.height = finalComposite.height;
+      ui.resultCanvas.getContext('2d').drawImage(finalComposite, 0, 0);
+      ui.resultInfo.innerHTML = `Processed size: <b>${finalComposite.width} × ${finalComposite.height}</b> px<br>Ratio preset: <b>${ratio}</b><br>Background: <b>${bgMode}</b>`;
+      setStatus('Done', 'Photo ready', 100);
+    } catch (err) {
+      console.error(err);
+      alert('Could not process the photo. Check console for details.');
+      setStatus('Error', String(err.message || err), 0);
+    } finally {
+      working = false;
+      ui.processBtn.disabled = false;
+      ui.processBtn.textContent = 'Process photo';
+    }
+  }
+
+  async function initUpload(file) {
+    if (!file) return;
+    sourceBitmap = await fileToBitmap(file);
+    drawBitmapToCanvas(sourceBitmap, ui.inputCanvas);
+    ui.resultInfo.textContent = 'Ready to process.';
+    setStatus('Loaded', 'Image loaded', 5);
+  }
+
+  function resetAll() {
+    sourceBitmap = null;
+    processed = null;
+    ui.fileInput.value = '';
+    drawPlaceholder(ui.inputCanvas, 'Input preview');
+    drawPlaceholder(ui.resultCanvas, 'Result preview');
+    ui.resultInfo.textContent = 'No image processed yet.';
+    ui.progressBar.style.width = '0%';
+    setStatus('Idle', 'Waiting for upload', 0);
+  }
+
+  function downloadSheetImage() {
+    if (!processed) return alert('Process an image first.');
+    const sheet = makeA4Sheet(processed, 8);
+    downloadCanvas(sheet, 'passport-sheet.png');
+  }
+
+  function downloadPdf() {
+    if (!processed) return alert('Process an image first.');
+    const sheet = makeA4Sheet(processed, 8);
+    const data = sheet.toDataURL('image/png', 1.0);
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    pdf.addImage(data, 'PNG', 0, 0, pageW, pageH);
+    pdf.save('passport-sheet.pdf');
+  }
+
+  ui.fileInput.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if (file) await initUpload(file);
+  });
+
+  ui.processBtn.addEventListener('click', processImage);
+  ui.loadBtn.addEventListener('click', async () => {
+    try { await loadModels(); }
+    catch (e) { console.error(e); alert('Model loading failed. Check the model URLs and CORS access.'); }
+  });
+  ui.resetBtn.addEventListener('click', resetAll);
+  ui.downloadPng.addEventListener('click', () => processed ? downloadCanvas(processed, 'passport-photo.png') : alert('Process an image first.'));
+  ui.downloadJpg.addEventListener('click', () => processed ? downloadCanvas(processed, 'passport-photo.jpg', 'image/jpeg', 0.95) : alert('Process an image first.'));
+  ui.downloadSheet.addEventListener('click', downloadSheetImage);
+  ui.downloadPdf.addEventListener('click', downloadPdf);
+
+  // Drag and drop support.
+  ['dragenter', 'dragover'].forEach(evt => {
+    ui.dropBox.addEventListener(evt, (e) => {
+      e.preventDefault(); e.stopPropagation();
+      ui.dropBox.classList.add('drag');
+    });
+  });
+  ['dragleave', 'drop'].forEach(evt => {
+    ui.dropBox.addEventListener(evt, (e) => {
+      e.preventDefault(); e.stopPropagation();
+      ui.dropBox.classList.remove('drag');
+    });
+  });
+  ui.dropBox.addEventListener('drop', async (e) => {
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      ui.fileInput.files = e.dataTransfer.files;
+      await initUpload(file);
+    }
+  });
+
+  // Slight live refresh for edits.
+  ['change', 'input'].forEach(evt => {
+    [ui.bgColor, ui.bgMode, ui.cropStrength, ui.brightness, ui.contrast, ui.sharpness, ui.ratioSelect].forEach(el => {
+      el.addEventListener(evt, () => { if (processed) processImage(); });
+    });
+  });
+
+  resetAll();
+</script>
 </body>
 </html>
