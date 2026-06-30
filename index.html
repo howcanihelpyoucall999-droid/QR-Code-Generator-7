@@ -1,974 +1,1702 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Passport Photo AI Maker</title>
-  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-  <style>
-    :root {
-      --bg: #0b1220;
-      --panel: #111a2e;
-      --panel-2: #16233d;
-      --text: #e8eefc;
-      --muted: #a7b3cf;
-      --accent: #6aa4ff;
-      --accent-2: #84e3b7;
-      --danger: #ff6b6b;
-      --border: rgba(255,255,255,.09);
-      --shadow: 0 16px 50px rgba(0,0,0,.28);
-      --radius: 20px;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      background: radial-gradient(circle at top, #152544 0%, var(--bg) 55%);
-      color: var(--text);
-      min-height: 100vh;
-    }
-    .wrap {
-      max-width: 1280px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-    .hero {
-      display: grid;
-      grid-template-columns: 1.3fr .9fr;
-      gap: 16px;
-      align-items: stretch;
-      margin-bottom: 16px;
-    }
-    .card {
-      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(14px);
-    }
-    .intro { padding: 22px; }
-    h1 { margin: 0 0 8px; font-size: clamp(28px, 3.8vw, 46px); line-height: 1.05; }
-    .sub { color: var(--muted); line-height: 1.6; max-width: 70ch; }
-    .badge-row { display:flex; flex-wrap:wrap; gap:10px; margin-top:16px; }
-    .badge {
-      font-size: 13px; padding: 8px 12px; border-radius: 999px;
-      background: rgba(106,164,255,.12); border: 1px solid rgba(106,164,255,.22);
-      color: #d9e7ff;
-    }
-    .panel { padding: 16px; }
-    .status { display:flex; justify-content:space-between; gap: 12px; align-items:center; margin-bottom: 12px; }
-    .status strong { font-size: 14px; }
-    .status span { color: var(--muted); font-size: 13px; }
-    .progress { width: 100%; height: 12px; background: rgba(255,255,255,.08); border-radius: 999px; overflow:hidden; }
-    .bar { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .2s ease; }
-    .controls {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 12px;
-      margin: 16px 0;
-    }
-    .control, .dropzone, .preview, .sheet {
-      background: rgba(15, 24, 44, .86);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-    }
-    .control { padding: 12px; }
-    .control label { display:block; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
-    .control input, .control select, .control button {
-      width: 100%;
-      border-radius: 14px;
-      border: 1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.05);
-      color: var(--text);
-      padding: 11px 12px;
-      outline: none;
-      font-size: 14px;
-    }
-    .control button {
-      cursor: pointer;
-      transition: transform .15s ease, background .15s ease;
-      background: rgba(106,164,255,.2);
-      font-weight: 700;
-    }
-    .control button:hover { transform: translateY(-1px); background: rgba(106,164,255,.28); }
-    .control button.secondary { background: rgba(132,227,183,.16); }
-    .control button.danger { background: rgba(255,107,107,.16); }
-    .main {
-      display:grid;
-      grid-template-columns: 360px 1fr;
-      gap: 16px;
-      align-items:start;
-    }
-    .dropzone {
-      padding: 14px;
-      min-height: 560px;
-      display:flex;
-      flex-direction:column;
-      gap: 12px;
-    }
-    .dropzone .box {
-      border: 2px dashed rgba(255,255,255,.14);
-      border-radius: 18px;
-      min-height: 220px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      text-align:center;
-      padding: 18px;
-      color: var(--muted);
-      background: rgba(255,255,255,.03);
-    }
-    .dropzone .box.drag { border-color: var(--accent); color: var(--text); background: rgba(106,164,255,.08); }
-    .preview {
-      padding: 14px;
-    }
-    .grid {
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-    }
-    .block h3 { margin: 0 0 10px; font-size: 16px; }
-    canvas {
-      max-width: 100%;
-      display:block;
-      width: 100%;
-      height: auto;
-      background: linear-gradient(45deg, #d8d8d8 25%, transparent 25%), linear-gradient(-45deg, #d8d8d8 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #d8d8d8 75%), linear-gradient(-45deg, transparent 75%, #d8d8d8 75%);
-      background-size: 18px 18px;
-      background-position: 0 0, 0 9px, 9px -9px, -9px 0px;
-      border-radius: 16px;
-    }
-    .tools {
-      display:grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      margin-top: 10px;
-    }
-    .small { font-size: 12px; color: var(--muted); line-height: 1.5; }
-    .result-actions { display:flex; flex-wrap:wrap; gap: 10px; margin-top: 12px; }
-    .result-actions button {
-      border: 1px solid rgba(255,255,255,.14);
-      color: var(--text);
-      background: rgba(255,255,255,.05);
-      padding: 10px 12px;
-      border-radius: 14px;
-      cursor: pointer;
-      font-weight: 700;
-    }
-    .result-actions button.primary { background: rgba(106,164,255,.2); }
-    .result-actions button.good { background: rgba(132,227,183,.16); }
-    .two-up {
-      display:grid;
-      grid-template-columns: 1fr 360px;
-      gap: 16px;
-      margin-top: 16px;
-      align-items:start;
-    }
-    .sheet { padding: 14px; }
-    .foot {
-      margin: 18px 0 8px;
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.6;
-    }
-    @media (max-width: 1100px) {
-      .hero, .main, .two-up, .controls { grid-template-columns: 1fr; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Passport AI Photo Maker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #0F1C2E;
+    --navy-light: #1A2E47;
+    --blue: #1A56DB;
+    --blue-light: #3B7DFF;
+    --blue-faint: #EBF2FF;
+    --sand: #F5F0E8;
+    --white: #FFFFFF;
+    --gray-50: #F9FAFB;
+    --gray-100: #F3F4F6;
+    --gray-200: #E5E7EB;
+    --gray-400: #9CA3AF;
+    --gray-600: #4B5563;
+    --gray-800: #1F2937;
+    --green: #10B981;
+    --green-faint: #ECFDF5;
+    --red: #EF4444;
+    --red-faint: #FEF2F2;
+    --border-radius: 12px;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.10), 0 2px 6px rgba(0,0,0,0.06);
+    --shadow-lg: 0 10px 40px rgba(0,0,0,0.14);
+    --transition: 0.2s ease;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--gray-50);
+    color: var(--gray-800);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: var(--navy);
+    padding: 0 24px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+  }
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+    background: var(--blue);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+  .logo-text { color: var(--white); font-weight: 700; font-size: 15px; letter-spacing: -0.3px; }
+  .logo-sub { color: var(--gray-400); font-size: 11px; font-weight: 400; }
+
+  .header-steps {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .step-pill {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--gray-400);
+    background: transparent;
+    transition: var(--transition);
+    white-space: nowrap;
+  }
+  .step-pill.active { background: var(--blue); color: var(--white); }
+  .step-pill.done { color: var(--green); }
+  .step-dot { width: 16px; height: 2px; background: var(--navy-light); border-radius: 1px; }
+
+  /* ── Layout ── */
+  .main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 20px 80px;
+  }
+
+  .panel {
+    background: var(--white);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--gray-200);
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .panel-header {
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--gray-100);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .panel-num {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--blue-faint);
+    color: var(--blue);
+    font-weight: 700;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .panel-num.done { background: var(--green-faint); color: var(--green); }
+  .panel-title { font-weight: 600; font-size: 15px; }
+  .panel-subtitle { font-size: 12px; color: var(--gray-400); margin-top: 1px; }
+  .panel-body { padding: 24px; }
+
+  /* ── Upload ── */
+  .upload-zone {
+    border: 2px dashed var(--gray-200);
+    border-radius: 10px;
+    padding: 48px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: var(--transition);
+    background: var(--gray-50);
+    position: relative;
+  }
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--blue);
+    background: var(--blue-faint);
+  }
+  .upload-zone input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .upload-icon { font-size: 40px; margin-bottom: 12px; }
+  .upload-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+  .upload-hint { font-size: 13px; color: var(--gray-400); }
+  .upload-formats { margin-top: 8px; font-size: 11px; color: var(--gray-400); }
+
+  /* ── Progress ── */
+  .progress-wrap {
+    padding: 20px 24px;
+    display: none;
+  }
+  .progress-wrap.visible { display: block; }
+  .progress-label {
+    font-size: 13px;
+    color: var(--gray-600);
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .progress-bar-bg {
+    height: 6px;
+    background: var(--gray-100);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--blue), var(--blue-light));
+    border-radius: 3px;
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+  .progress-stages {
+    display: flex;
+    gap: 16px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .progress-stage {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--gray-400);
+  }
+  .progress-stage.active { color: var(--blue); }
+  .progress-stage.done { color: var(--green); }
+  .stage-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--gray-200);
+    transition: var(--transition);
+  }
+  .progress-stage.active .stage-dot { background: var(--blue); animation: pulse 1s infinite; }
+  .progress-stage.done .stage-dot { background: var(--green); }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; } 50% { opacity: 0.4; }
+  }
+
+  /* ── Editor ── */
+  .editor-layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 768px) {
+    .editor-layout { grid-template-columns: 1fr; }
+  }
+
+  .canvas-wrap {
+    position: relative;
+    background: #2A2A2A;
+    border-radius: 10px;
+    overflow: hidden;
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    touch-action: none;
+  }
+  #editorCanvas {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+    cursor: move;
+  }
+  .canvas-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .crop-box {
+    position: absolute;
+    border: 2px solid rgba(255,255,255,0.9);
+    box-shadow: 0 0 0 9999px rgba(0,0,0,0.45);
+    pointer-events: none;
+  }
+  .crop-corner {
+    position: absolute;
+    width: 12px; height: 12px;
+    border-color: white;
+    border-style: solid;
+  }
+  .crop-corner.tl { top: -1px; left: -1px; border-width: 3px 0 0 3px; }
+  .crop-corner.tr { top: -1px; right: -1px; border-width: 3px 3px 0 0; }
+  .crop-corner.bl { bottom: -1px; left: -1px; border-width: 0 0 3px 3px; }
+  .crop-corner.br { bottom: -1px; right: -1px; border-width: 0 3px 3px 0; }
+
+  /* ── Controls ── */
+  .ctrl-section { margin-bottom: 20px; }
+  .ctrl-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 10px;
+  }
+
+  .color-swatches {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+  .swatch {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: var(--transition);
+    position: relative;
+    flex-shrink: 0;
+  }
+  .swatch:hover { transform: scale(1.1); }
+  .swatch.active { border-color: var(--blue); box-shadow: 0 0 0 2px white, 0 0 0 4px var(--blue); }
+  .swatch-custom {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #ff6b6b, #ffd93d, #6bcb77, #4d96ff);
+    font-size: 18px;
+    overflow: hidden;
+  }
+  .swatch-custom input[type=color] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+
+  .size-selector {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .size-btn {
+    padding: 10px 8px;
+    border: 2px solid var(--gray-200);
+    border-radius: 8px;
+    background: white;
+    cursor: pointer;
+    text-align: center;
+    transition: var(--transition);
+    font-family: inherit;
+  }
+  .size-btn:hover { border-color: var(--blue-light); }
+  .size-btn.active { border-color: var(--blue); background: var(--blue-faint); color: var(--blue); }
+  .size-btn-name { font-weight: 600; font-size: 13px; }
+  .size-btn-dim { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
+  .size-btn.active .size-btn-dim { color: var(--blue); opacity: 0.7; }
+
+  .custom-size-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .ctrl-input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1.5px solid var(--gray-200);
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    transition: var(--transition);
+    background: var(--white);
+  }
+  .ctrl-input:focus { border-color: var(--blue); }
+  .ctrl-input-label { font-size: 11px; color: var(--gray-400); margin-bottom: 4px; }
+
+  .zoom-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .zoom-row input[type=range] {
+    flex: 1;
+    height: 4px;
+    -webkit-appearance: none;
+    background: var(--gray-200);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+  .zoom-row input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px; height: 16px;
+    background: var(--blue);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  }
+  .zoom-val {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--gray-600);
+    min-width: 36px;
+    text-align: right;
+  }
+  .zoom-icons { font-size: 14px; color: var(--gray-400); cursor: pointer; padding: 2px; }
+  .zoom-icons:hover { color: var(--blue); }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: var(--transition);
+    border: none;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .btn-primary { background: var(--blue); color: white; }
+  .btn-primary:hover { background: var(--blue-light); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+  .btn-secondary { background: var(--gray-100); color: var(--gray-800); border: 1.5px solid var(--gray-200); }
+  .btn-secondary:hover { background: var(--gray-200); }
+  .btn-success { background: var(--green); color: white; }
+  .btn-success:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-outline { background: transparent; color: var(--blue); border: 1.5px solid var(--blue); }
+  .btn-outline:hover { background: var(--blue-faint); }
+  .btn-sm { padding: 7px 14px; font-size: 12px; }
+  .btn-lg { padding: 13px 24px; font-size: 15px; }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* ── Sheet options ── */
+  .layout-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  @media (max-width: 500px) { .layout-grid { grid-template-columns: repeat(2, 1fr); } }
+  .layout-btn {
+    padding: 12px 8px;
+    border: 2px solid var(--gray-200);
+    border-radius: 8px;
+    background: white;
+    cursor: pointer;
+    text-align: center;
+    transition: var(--transition);
+    font-family: inherit;
+  }
+  .layout-btn:hover { border-color: var(--blue-light); }
+  .layout-btn.active { border-color: var(--blue); background: var(--blue-faint); color: var(--blue); }
+  .layout-btn-num { font-size: 22px; font-weight: 700; }
+  .layout-btn-label { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
+  .layout-btn.active .layout-btn-label { color: var(--blue); opacity: 0.7; }
+
+  /* ── Preview sheet ── */
+  #sheetCanvas {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    border: 1px solid var(--gray-200);
+    box-shadow: var(--shadow-sm);
+    display: block;
+  }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--gray-800);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: var(--shadow-lg);
+    z-index: 999;
+    transition: transform 0.3s ease;
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.success { background: var(--green); }
+  .toast.error { background: var(--red); }
+
+  /* ── Sections ── */
+  .section { display: none; }
+  .section.visible { display: block; }
+
+  /* ── Result preview ── */
+  .result-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+  }
+  .result-card {
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+  }
+  .result-card img {
+    max-width: 100%;
+    height: 140px;
+    object-fit: contain;
+    border-radius: 6px;
+    margin-bottom: 8px;
+  }
+  .result-card-label { font-size: 12px; color: var(--gray-600); font-weight: 500; margin-bottom: 8px; }
+
+  /* ── Error banner ── */
+  .error-banner {
+    background: var(--red-faint);
+    border: 1px solid #FCA5A5;
+    color: #991B1B;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin: 12px 0;
+    display: none;
+  }
+  .error-banner.visible { display: block; }
+
+  /* ── Misc ── */
+  hr { border: none; border-top: 1px solid var(--gray-100); margin: 20px 0; }
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    background: var(--green-faint);
+    color: var(--green);
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 20px;
+    margin-left: 8px;
+  }
+  .tag.blue { background: var(--blue-faint); color: var(--blue); }
+
+  .info-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .info-item { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--gray-600); }
+  .info-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+
+  @media (max-width: 480px) {
+    .header-steps { display: none; }
+    .panel-body { padding: 16px; }
+    .editor-layout { gap: 16px; }
+  }
+</style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="hero">
-      <div class="card intro">
-        <h1>Passport Photo AI Maker</h1>
-        <div class="sub">
-          Upload a photo, remove the background in the browser, auto-center the subject, choose a new background color, and export a print-ready passport sheet. The 3-stage background-removal pipeline used here matches the Snap model card: depth estimation, matting, and refining.
-        </div>
-        <div class="badge-row">
-          <div class="badge">Runs in browser</div>
-          <div class="badge">No backend</div>
-          <div class="badge">Hugging Face model files</div>
-          <div class="badge">PNG / JPG / A4 PDF export</div>
-        </div>
-      </div>
-      <div class="card panel">
-        <div class="status">
-          <div>
-            <strong>Model status</strong><br>
-            <span id="modelStatus">Waiting for upload</span>
-          </div>
-          <div style="text-align:right">
-            <strong id="stageLabel">Idle</strong><br>
-            <span id="detailLabel">Load the file first</span>
-          </div>
-        </div>
-        <div class="progress"><div id="progressBar" class="bar"></div></div>
-        <div class="small" style="margin-top:10px;">
-          First run may take time because the browser downloads the ONNX weights. On low-end phones, the process can be slower.
-        </div>
+
+<!-- Header -->
+<header class="header">
+  <a class="logo" href="#">
+    <div class="logo-icon">📷</div>
+    <div>
+      <div class="logo-text">Passport AI Photo</div>
+      <div class="logo-sub">Browser-based · No upload · Private</div>
+    </div>
+  </a>
+  <div class="header-steps" id="headerSteps">
+    <span class="step-pill active" id="pill1">1 · Upload</span>
+    <div class="step-dot"></div>
+    <span class="step-pill" id="pill2">2 · Remove BG</span>
+    <div class="step-dot"></div>
+    <span class="step-pill" id="pill3">3 · Edit</span>
+    <div class="step-dot"></div>
+    <span class="step-pill" id="pill4">4 · Export</span>
+  </div>
+</header>
+
+<!-- Main -->
+<main class="main">
+
+  <!-- ① Upload -->
+  <div class="panel section visible" id="secUpload">
+    <div class="panel-header">
+      <div class="panel-num" id="num1">1</div>
+      <div>
+        <div class="panel-title">Upload Photo</div>
+        <div class="panel-subtitle">JPG, PNG, WebP up to 20MB · stays in your browser</div>
       </div>
     </div>
+    <div class="panel-body">
+      <div class="info-row">
+        <div class="info-item"><div class="info-dot"></div> AI removes background in browser</div>
+        <div class="info-item"><div class="info-dot" style="background:var(--blue)"></div> No data ever leaves your device</div>
+        <div class="info-item"><div class="info-dot" style="background:#F59E0B"></div> Works offline after first load</div>
+      </div>
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="fileInput" accept="image/*">
+        <div class="upload-icon">🖼️</div>
+        <div class="upload-title">Drop your photo here or click to browse</div>
+        <div class="upload-hint">For best results: clear face, good lighting, simple background</div>
+        <div class="upload-formats">JPG · PNG · WebP · HEIC</div>
+      </div>
+      <div class="error-banner" id="uploadError"></div>
+    </div>
+  </div>
 
-    <div class="controls">
-      <div class="control">
-        <label>Upload image</label>
-        <input id="fileInput" type="file" accept="image/*" />
-      </div>
-      <div class="control">
-        <label>Passport ratio</label>
-        <select id="ratioSelect">
-          <option value="35x45">35 × 45 mm</option>
-          <option value="2x2">2 × 2 inch</option>
-          <option value="4x6">4 × 6 inch sheet</option>
-        </select>
-      </div>
-      <div class="control">
-        <label>Background color</label>
-        <input id="bgColor" type="color" value="#ffffff" />
-      </div>
-      <div class="control">
-        <label>Background mode</label>
-        <select id="bgMode">
-          <option value="solid">Solid color</option>
-          <option value="transparent">Transparent</option>
-        </select>
-      </div>
-      <div class="control">
-        <label>Auto crop strength</label>
-        <input id="cropStrength" type="range" min="0" max="100" value="72" />
-      </div>
-      <div class="control">
-        <label>Brightness</label>
-        <input id="brightness" type="range" min="-40" max="40" value="0" />
-      </div>
-      <div class="control">
-        <label>Contrast</label>
-        <input id="contrast" type="range" min="-40" max="40" value="0" />
-      </div>
-      <div class="control">
-        <label>Sharpness</label>
-        <input id="sharpness" type="range" min="0" max="20" value="0" />
+  <!-- ② AI Processing -->
+  <div class="panel section" id="secProcess">
+    <div class="panel-header">
+      <div class="panel-num" id="num2">2</div>
+      <div>
+        <div class="panel-title">AI Background Removal <span class="tag blue">In Progress</span></div>
+        <div class="panel-subtitle">Running on-device segmentation entirely in your browser</div>
       </div>
     </div>
-
-    <div class="main">
-      <div class="dropzone">
-        <div id="dropBox" class="box">
-          <div>
-            <div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:6px;">Drop photo here</div>
-            <div class="small">or choose a file above</div>
-          </div>
+    <div class="panel-body">
+      <div class="progress-wrap visible">
+        <div class="progress-label">
+          <span id="progressText">Loading AI model…</span>
+          <span id="progressPct">0%</span>
         </div>
-        <div class="tools">
-          <button id="processBtn">Process photo</button>
-          <button id="resetBtn" class="danger">Reset</button>
-          <button id="loadBtn" class="secondary">Load models</button>
+        <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
+        <div class="progress-stages">
+          <div class="progress-stage" id="stage1"><div class="stage-dot"></div>Load engine</div>
+          <div class="progress-stage" id="stage2"><div class="stage-dot"></div>Load model</div>
+          <div class="progress-stage" id="stage3"><div class="stage-dot"></div>Ready</div>
+          <div class="progress-stage" id="stage4"><div class="stage-dot"></div>Run segmentation</div>
+          <div class="progress-stage" id="stage5"><div class="stage-dot"></div>Refine edges</div>
         </div>
-        <div class="small">
-          Model URLs used here:
-          <br>• depth_anything_v2_vits_slim.onnx
-          <br>• snap_matting_0.1.0.onnx
-          <br>• snap_refiner_0.1.0.onnx
-        </div>
-        <div class="small">
-          Tip: use a clear front-facing portrait for best passport results.
-        </div>
-      </div>
-
-      <div class="preview">
-        <div class="grid">
-          <div class="block">
-            <h3>Input preview</h3>
-            <canvas id="inputCanvas" width="800" height="1000"></canvas>
-          </div>
-          <div class="block">
-            <h3>Result preview</h3>
-            <canvas id="resultCanvas" width="800" height="1000"></canvas>
-          </div>
-        </div>
-
-        <div class="result-actions">
-          <button id="downloadPng" class="primary">Download PNG</button>
-          <button id="downloadJpg">Download JPG</button>
-          <button id="downloadSheet" class="good">Download A4 sheet</button>
-          <button id="downloadPdf">Download PDF</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="two-up">
-      <div class="sheet">
-        <h3 style="margin:0 0 10px;">Passport settings</h3>
-        <div class="small">
-          The cropper keeps the face centered, leaves a little headroom, and uses the selected ratio. For printing, the A4 sheet arranges multiple copies.
-        </div>
-        <div class="foot">
-          Browser inference is powered by ONNX Runtime Web, which is designed for in-browser machine-learning inference. The Snap model card describes a 3-stage pipeline: depth estimation, matting, and refining.
-        </div>
-      </div>
-      <div class="sheet">
-        <h3 style="margin:0 0 10px;">Output info</h3>
-        <div id="resultInfo" class="small">No image processed yet.</div>
+        <div class="error-banner" id="processError"></div>
+        <button class="btn btn-secondary" id="btnRetryProcess" style="display:none; margin-top:12px;">Retry</button>
       </div>
     </div>
   </div>
 
+
+  <!-- ③ Editor -->
+  <div class="panel section" id="secEditor">
+    <div class="panel-header">
+      <div class="panel-num done" id="num3">✓</div>
+      <div>
+        <div class="panel-title">Edit & Customize</div>
+        <div class="panel-subtitle">Drag to reposition · scroll to zoom · pick background color</div>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="editor-layout">
+
+        <!-- Canvas -->
+        <div>
+          <div class="canvas-wrap" id="canvasWrap">
+            <canvas id="editorCanvas"></canvas>
+            <div class="canvas-overlay">
+              <div class="crop-box" id="cropBox">
+                <div class="crop-corner tl"></div>
+                <div class="crop-corner tr"></div>
+                <div class="crop-corner bl"></div>
+                <div class="crop-corner br"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Controls -->
+        <div>
+          <!-- Zoom -->
+          <div class="ctrl-section">
+            <div class="ctrl-label">Zoom</div>
+            <div class="zoom-row">
+              <span class="zoom-icons" id="zoomOut">−</span>
+              <input type="range" id="zoomSlider" min="50" max="300" value="100">
+              <span class="zoom-icons" id="zoomIn">+</span>
+              <span class="zoom-val" id="zoomVal">100%</span>
+            </div>
+          </div>
+
+          <!-- Background Color -->
+          <div class="ctrl-section">
+            <div class="ctrl-label">Background Color</div>
+            <div class="color-swatches">
+              <div class="swatch active" data-color="#FFFFFF" style="background:#FFFFFF; border:1.5px solid #E5E7EB;" title="White"></div>
+              <div class="swatch" data-color="#4A90D9" style="background:#4A90D9;" title="Passport Blue"></div>
+              <div class="swatch" data-color="#E8EEF5" style="background:#E8EEF5; border:1.5px solid #E5E7EB;" title="Light Gray"></div>
+              <div class="swatch" data-color="#C8D8E8" style="background:#C8D8E8;" title="Sky Blue"></div>
+              <div class="swatch" data-color="#F5E8D0" style="background:#F5E8D0;" title="Warm Cream"></div>
+              <div class="swatch swatch-custom" title="Custom Color">
+                🎨<input type="color" id="colorPicker" value="#FFFFFF">
+              </div>
+            </div>
+          </div>
+
+          <!-- Passport Size -->
+          <div class="ctrl-section">
+            <div class="ctrl-label">Passport Size</div>
+            <div class="size-selector">
+              <button class="size-btn active" data-w="35" data-h="45" data-dpi="300">
+                <div class="size-btn-name">Standard</div>
+                <div class="size-btn-dim">35 × 45 mm</div>
+              </button>
+              <button class="size-btn" data-w="50.8" data-h="50.8" data-dpi="300">
+                <div class="size-btn-name">USA / Canada</div>
+                <div class="size-btn-dim">2 × 2 inch</div>
+              </button>
+              <button class="size-btn" data-w="40" data-h="60" data-dpi="300">
+                <div class="size-btn-name">India / CN</div>
+                <div class="size-btn-dim">40 × 60 mm</div>
+              </button>
+              <button class="size-btn" data-w="0" data-h="0" data-dpi="300" id="customSizeBtn">
+                <div class="size-btn-name">Custom</div>
+                <div class="size-btn-dim">Set below</div>
+              </button>
+            </div>
+            <div id="customSizeRow" class="custom-size-row" style="display:none;">
+              <div>
+                <div class="ctrl-input-label">Width (mm)</div>
+                <input class="ctrl-input" type="number" id="customW" value="35" min="10" max="200">
+              </div>
+              <div>
+                <div class="ctrl-input-label">Height (mm)</div>
+                <input class="ctrl-input" type="number" id="customH" value="45" min="10" max="200">
+              </div>
+            </div>
+          </div>
+
+          <!-- Auto-center -->
+          <div class="ctrl-section">
+            <div class="ctrl-label">Tools</div>
+            <div class="btn-row">
+              <button class="btn btn-secondary btn-sm" id="btnCenter">⊙ Center</button>
+              <button class="btn btn-secondary btn-sm" id="btnReset">↺ Reset</button>
+              <button class="btn btn-secondary btn-sm" id="btnReupload">↑ New photo</button>
+            </div>
+          </div>
+
+          <!-- Apply -->
+          <button class="btn btn-primary" style="width:100%;margin-top:8px;" id="btnApply">
+            ✓ Apply &amp; Continue →
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ④ Export -->
+  <div class="panel section" id="secExport">
+    <div class="panel-header">
+      <div class="panel-num done" id="num4">✓</div>
+      <div>
+        <div class="panel-title">Export &amp; Download</div>
+        <div class="panel-subtitle">Passport photo + printable A4 sheet</div>
+      </div>
+    </div>
+    <div class="panel-body">
+
+      <!-- A4 layout picker -->
+      <div class="ctrl-section">
+        <div class="ctrl-label">A4 Sheet Layout</div>
+        <div class="layout-grid">
+          <button class="layout-btn active" data-count="4" id="layout4">
+            <div class="layout-btn-num">4</div>
+            <div class="layout-btn-label">photos</div>
+          </button>
+          <button class="layout-btn" data-count="6" id="layout6">
+            <div class="layout-btn-num">6</div>
+            <div class="layout-btn-label">photos</div>
+          </button>
+          <button class="layout-btn" data-count="8" id="layout8">
+            <div class="layout-btn-num">8</div>
+            <div class="layout-btn-label">photos</div>
+          </button>
+          <button class="layout-btn" data-count="12" id="layout12">
+            <div class="layout-btn-num">12</div>
+            <div class="layout-btn-label">photos</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Sheet preview -->
+      <div style="margin-bottom:20px;">
+        <div class="ctrl-label">Sheet Preview</div>
+        <canvas id="sheetCanvas"></canvas>
+      </div>
+
+      <!-- Single photo previews -->
+      <div class="ctrl-section">
+        <div class="ctrl-label">Single Passport Photo</div>
+        <div class="result-grid" id="resultGrid">
+          <div class="result-card">
+            <canvas id="previewPng" width="200" height="260" style="max-width:100%;height:140px;object-fit:contain;border-radius:6px;margin-bottom:8px;"></canvas>
+            <div class="result-card-label">With background</div>
+            <button class="btn btn-outline btn-sm" id="dlPng">↓ PNG</button>
+          </div>
+          <div class="result-card">
+            <canvas id="previewJpg" width="200" height="260" style="max-width:100%;height:140px;object-fit:contain;border-radius:6px;margin-bottom:8px;"></canvas>
+            <div class="result-card-label">JPG (print-ready)</div>
+            <button class="btn btn-outline btn-sm" id="dlJpg">↓ JPG</button>
+          </div>
+          <div class="result-card">
+            <canvas id="previewAlpha" width="200" height="260" style="max-width:100%;height:140px;object-fit:contain;border-radius:6px;margin-bottom:8px;background:repeating-conic-gradient(#e0e0e0 0% 25%,#fff 0% 50%) 0 0/16px 16px;"></canvas>
+            <div class="result-card-label">Transparent PNG</div>
+            <button class="btn btn-outline btn-sm" id="dlAlpha">↓ PNG (no BG)</button>
+          </div>
+        </div>
+      </div>
+
+      <hr>
+
+      <!-- Download buttons -->
+      <div class="btn-row">
+        <button class="btn btn-success btn-lg" id="dlSheet">↓ Download A4 Sheet (PDF)</button>
+        <button class="btn btn-primary" id="dlSheetPng">↓ A4 Sheet PNG</button>
+        <button class="btn btn-secondary" id="btnStartOver">↺ Start Over</button>
+      </div>
+
+    </div>
+  </div>
+
+</main>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- ── Scripts ── -->
+<!-- ONNX Runtime Web from CDN -->
+<!-- MediaPipe Tasks Vision is loaded dynamically via ES module import inside loadModels() -->
+
+
 <script>
-  const DEPTH_MODEL = 'https://huggingface.co/Dops7/Goby/resolve/main/depth_anything_v2_vits_slim.onnx';
-  const MATTING_MODEL = 'https://huggingface.co/Dops7/Goby/resolve/main/snap_matting_0.1.0.onnx';
-  const REFINER_MODEL = 'https://huggingface.co/Dops7/Goby/resolve/main/snap_refiner_0.1.0.onnx';
+/* ═══════════════════════════════════════════════════════════════════
+   PASSPORT AI PHOTO MAKER
+   Full in-browser pipeline:
+   Upload → ONNX BG removal → Editor → Export
+═══════════════════════════════════════════════════════════════════ */
 
-  const $ = (id) => document.getElementById(id);
-  const ui = {
-    fileInput: $('fileInput'),
-    dropBox: $('dropBox'),
-    processBtn: $('processBtn'),
-    resetBtn: $('resetBtn'),
-    loadBtn: $('loadBtn'),
-    downloadPng: $('downloadPng'),
-    downloadJpg: $('downloadJpg'),
-    downloadSheet: $('downloadSheet'),
-    downloadPdf: $('downloadPdf'),
-    inputCanvas: $('inputCanvas'),
-    resultCanvas: $('resultCanvas'),
-    modelStatus: $('modelStatus'),
-    stageLabel: $('stageLabel'),
-    detailLabel: $('detailLabel'),
-    progressBar: $('progressBar'),
-    resultInfo: $('resultInfo'),
-    ratioSelect: $('ratioSelect'),
-    bgColor: $('bgColor'),
-    bgMode: $('bgMode'),
-    cropStrength: $('cropStrength'),
-    brightness: $('brightness'),
-    contrast: $('contrast'),
-    sharpness: $('sharpness'),
-  };
+// ── State ──────────────────────────────────────────────────────────
+const state = {
+  originalImage: null,      // HTMLImageElement original
+  mattedCanvas: null,       // Canvas with alpha applied
+  bgColor: '#FFFFFF',
+  passportW: 35,            // mm
+  passportH: 45,
+  DPI: 300,
+  sheetCount: 4,
+  // editor transform
+  panX: 0, panY: 0,
+  scale: 1.0,
+  isDragging: false,
+  dragStartX: 0, dragStartY: 0,
+  lastPanX: 0, lastPanY: 0,
+};
 
-  // Make the runtime load wasm binaries from the CDN.
-  ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/';
-  ort.env.wasm.numThreads = 1;
+// ── Segmentation model config ──────────────────────────────────────
+// Using MediaPipe Tasks Vision (Google-hosted, CORS-safe, purpose-built
+// for selfie/portrait segmentation). Replaces unreliable third-party ONNX models.
+const MEDIAPIPE_VISION_BUNDLE = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm';
+const SELFIE_SEGMENTER_MODEL = 'https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite';
+let imageSegmenter = null;
+let segmenterLoadError = null;
 
-  let depthSession = null;
-  let mattingSession = null;
-  let refinerSession = null;
-  let sourceBitmap = null;
-  let sourceMeta = null;
-  let processed = null;
-  let working = false;
 
-  function setStatus(stage, detail, progress = null) {
-    ui.stageLabel.textContent = stage;
-    ui.detailLabel.textContent = detail;
-    ui.modelStatus.textContent = detail;
-    if (progress === null) return;
-    ui.progressBar.style.width = `${Math.max(0, Math.min(100, progress))}%`;
+// ── DOM refs ───────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const uploadZone   = $('uploadZone');
+const fileInput    = $('fileInput');
+const editorCanvas = $('editorCanvas');
+const editorCtx    = editorCanvas.getContext('2d');
+const cropBox      = $('cropBox');
+const canvasWrap   = $('canvasWrap');
+const zoomSlider   = $('zoomSlider');
+const zoomVal      = $('zoomVal');
+const colorPicker  = $('colorPicker');
+const sheetCanvas  = $('sheetCanvas');
+const sheetCtx     = sheetCanvas.getContext('2d');
+
+// ── Section visibility ─────────────────────────────────────────────
+function showSection(id) {
+  ['secUpload','secProcess','secEditor','secExport'].forEach(s => {
+    $(s).classList.toggle('visible', s === id);
+  });
+}
+
+function updatePills(step) {
+  for (let i = 1; i <= 4; i++) {
+    const p = $('pill'+i);
+    p.classList.remove('active','done');
+    if (i === step) p.classList.add('active');
+    else if (i < step) p.classList.add('done');
   }
+}
 
-  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+// ── Toast ──────────────────────────────────────────────────────────
+function toast(msg, type='', dur=3000) {
+  const el = $('toast');
+  el.textContent = msg;
+  el.className = 'toast show ' + type;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), dur);
+}
 
-  function drawPlaceholder(canvas, label) {
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#e5e7eb';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#64748b';
-    ctx.font = 'bold 32px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(label, canvas.width / 2, canvas.height / 2);
+// ── Progress ───────────────────────────────────────────────────────
+function setProgress(pct, text, stageIdx) {
+  $('progressFill').style.width = pct + '%';
+  $('progressPct').textContent = Math.round(pct) + '%';
+  if (text) $('progressText').textContent = text;
+  for (let i = 1; i <= 5; i++) {
+    const el = $('stage'+i);
+    el.classList.remove('active','done');
+    if (i === stageIdx) el.classList.add('active');
+    else if (i < stageIdx) el.classList.add('done');
   }
+}
 
-  drawPlaceholder(ui.inputCanvas, 'Input preview');
-  drawPlaceholder(ui.resultCanvas, 'Result preview');
+function showProcessError(msg) {
+  const el = $('processError');
+  el.textContent = '⚠ ' + msg;
+  el.classList.add('visible');
+  const retryBtn = $('btnRetryProcess');
+  if (retryBtn) retryBtn.style.display = 'inline-block';
+}
 
-  function fitContain(srcW, srcH, dstW, dstH) {
-    const scale = Math.min(dstW / srcW, dstH / srcH);
-    const w = Math.round(srcW * scale);
-    const h = Math.round(srcH * scale);
-    return { x: Math.round((dstW - w) / 2), y: Math.round((dstH - h) / 2), w, h };
-  }
+// ── Note: MediaPipe Tasks Vision caches its own wasm/model assets
+// internally via the browser cache, so no manual IndexedDB caching
+// layer is needed anymore. ─────────────────────────────────────────
 
-  function fitCover(srcW, srcH, dstW, dstH) {
-    const scale = Math.max(dstW / srcW, dstH / srcH);
-    const w = Math.round(srcW * scale);
-    const h = Math.round(srcH * scale);
-    return { x: Math.round((dstW - w) / 2), y: Math.round((dstH - h) / 2), w, h };
-  }
+// ── Load segmentation model (MediaPipe) ────────────────────────────
+async function loadModels() {
+  setProgress(5, 'Loading AI segmentation engine…', 1);
+  try {
+    const { FilesetResolver, ImageSegmenter } = await import(
+      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/+esm'
+    );
+    setProgress(35, 'Loading selfie segmentation model…', 2);
 
-  function canvasFromBitmap(bitmap, width, height, cover = false) {
-    const c = document.createElement('canvas');
-    c.width = width; c.height = height;
-    const ctx = c.getContext('2d');
-    const f = cover ? fitCover(bitmap.width, bitmap.height, width, height) : fitContain(bitmap.width, bitmap.height, width, height);
-    ctx.fillStyle = '#000';
-    ctx.clearRect(0, 0, width, height);
-    ctx.drawImage(bitmap, f.x, f.y, f.w, f.h);
-    return c;
-  }
+    const vision = await FilesetResolver.forVisionTasks(MEDIAPIPE_VISION_BUNDLE);
 
-  async function fileToBitmap(file) {
-    if ('createImageBitmap' in window) return await createImageBitmap(file);
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = reject;
-      img.src = URL.createObjectURL(file);
+    imageSegmenter = await ImageSegmenter.createFromOptions(vision, {
+      baseOptions: {
+        modelAssetPath: SELFIE_SEGMENTER_MODEL,
+        delegate: 'GPU',
+      },
+      runningMode: 'IMAGE',
+      outputCategoryMask: false,
+      outputConfidenceMasks: true,
     });
+
+    setProgress(90, 'Model ready…', 3);
+    console.log('MediaPipe ImageSegmenter loaded successfully.');
+  } catch (err) {
+    console.error('Failed to load MediaPipe segmenter:', err);
+    segmenterLoadError = err;
+    imageSegmenter = null;
+    // Try a CPU delegate fallback once, in case GPU/WebGL isn't available
+    try {
+      const { FilesetResolver, ImageSegmenter } = await import(
+        'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/+esm'
+      );
+      const vision = await FilesetResolver.forVisionTasks(MEDIAPIPE_VISION_BUNDLE);
+      imageSegmenter = await ImageSegmenter.createFromOptions(vision, {
+        baseOptions: { modelAssetPath: SELFIE_SEGMENTER_MODEL, delegate: 'CPU' },
+        runningMode: 'IMAGE',
+        outputCategoryMask: false,
+        outputConfidenceMasks: true,
+      });
+      segmenterLoadError = null;
+      console.log('MediaPipe ImageSegmenter loaded on CPU fallback.');
+    } catch (err2) {
+      console.error('CPU fallback also failed:', err2);
+      segmenterLoadError = err2;
+      imageSegmenter = null;
+    }
+  }
+}
+
+// ── (legacy ONNX tensor helpers removed — MediaPipe handles preprocessing internally) ──
+
+// ── Run AI background removal (MediaPipe Selfie Segmentation) ──────
+async function runBgRemoval(imgEl) {
+  const iw = imgEl.naturalWidth || imgEl.width;
+  const ih = imgEl.naturalHeight || imgEl.height;
+
+  if (!imageSegmenter) {
+    // No working model at all — be honest with the user instead of
+    // silently producing a fake oval cutout.
+    throw new Error(
+      'Background removal model could not be loaded' +
+      (segmenterLoadError ? ` (${segmenterLoadError.message})` : '') +
+      '. This usually means the page was opened from a non-https ' +
+      'location (e.g. a local/content:// URL) or the network blocked ' +
+      'the model download. Please open this tool over https:// and try again.'
+    );
   }
 
-  function drawBitmapToCanvas(bitmap, canvas) {
-    const ctx = canvas.getContext('2d');
-    canvas.width = bitmap.width;
-    canvas.height = bitmap.height;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(bitmap, 0, 0);
+  setProgress(92, 'Running AI segmentation…', 4);
+
+  // MediaPipe needs an actual <img> or canvas/ImageBitmap as input.
+  // Draw to a working canvas at original resolution for best edge quality.
+  const srcCanvas = document.createElement('canvas');
+  srcCanvas.width = iw;
+  srcCanvas.height = ih;
+  const srcCtx = srcCanvas.getContext('2d');
+  srcCtx.drawImage(imgEl, 0, 0, iw, ih);
+
+  const result = imageSegmenter.segment(srcCanvas);
+  const confMasks = result.confidenceMasks;
+  if (!confMasks || !confMasks.length) {
+    result.close && result.close();
+    throw new Error('Segmentation returned no mask data.');
   }
 
-  function normalizeToCHW(canvas, mean = [0,0,0], std = [1,1,1]) {
-    const ctx = canvas.getContext('2d');
-    const { width, height } = canvas;
-    const imageData = ctx.getImageData(0, 0, width, height).data;
-    const arr = new Float32Array(1 * 3 * width * height);
-    const area = width * height;
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        const i = (y * width + x) * 4;
-        const idx = y * width + x;
-        arr[idx] = (imageData[i] / 255 - mean[0]) / std[0];
-        arr[area + idx] = (imageData[i + 1] / 255 - mean[1]) / std[1];
-        arr[2 * area + idx] = (imageData[i + 2] / 255 - mean[2]) / std[2];
-      }
+  // For the selfie_segmenter model, mask[0] is "person" confidence (0..1).
+  const maskData = confMasks[0].getAsFloat32Array();
+  const maskW = confMasks[0].width;
+  const maskH = confMasks[0].height;
+
+  setProgress(96, 'Refining edges…', 5);
+
+  // Composite alpha onto the original-resolution image, with bilinear
+  // upsampling from the (usually lower-res) mask and a light feather
+  // pass to avoid hard/jagged cutout edges around hair and shoulders.
+  const resultCanvas = new OffscreenCanvas(iw, ih);
+  const rCtx = resultCanvas.getContext('2d');
+  rCtx.drawImage(imgEl, 0, 0, iw, ih);
+  const imgData = rCtx.getImageData(0, 0, iw, ih);
+  const px = imgData.data;
+
+  // First pass: bilinear-sample alpha into a full-res buffer.
+  const alphaBuf = new Float32Array(iw * ih);
+  for (let y = 0; y < ih; y++) {
+    const sy = (y / ih) * maskH;
+    const y0 = Math.min(maskH - 1, Math.floor(sy));
+    const y1 = Math.min(maskH - 1, y0 + 1);
+    const fy = sy - y0;
+    for (let x = 0; x < iw; x++) {
+      const sx = (x / iw) * maskW;
+      const x0 = Math.min(maskW - 1, Math.floor(sx));
+      const x1 = Math.min(maskW - 1, x0 + 1);
+      const fx = sx - x0;
+
+      const a00 = maskData[y0 * maskW + x0];
+      const a10 = maskData[y0 * maskW + x1];
+      const a01 = maskData[y1 * maskW + x0];
+      const a11 = maskData[y1 * maskW + x1];
+      const top = a00 + (a10 - a00) * fx;
+      const bot = a01 + (a11 - a01) * fx;
+      alphaBuf[y * iw + x] = top + (bot - top) * fy;
     }
-    return new ort.Tensor('float32', arr, [1, 3, height, width]);
   }
 
-  function rawRGBToCHW(canvas) {
-    const ctx = canvas.getContext('2d');
-    const { width, height } = canvas;
-    const imageData = ctx.getImageData(0, 0, width, height).data;
-    const arr = new Float32Array(1 * 3 * width * height);
-    const area = width * height;
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        const i = (y * width + x) * 4;
-        const idx = y * width + x;
-        arr[idx] = imageData[i] / 255;
-        arr[area + idx] = imageData[i + 1] / 255;
-        arr[2 * area + idx] = imageData[i + 2] / 255;
-      }
-    }
-    return arr;
-  }
-
-  function resizeCanvasAlpha(alphaData, srcW, srcH, dstW, dstH) {
-    const src = document.createElement('canvas');
-    src.width = srcW; src.height = srcH;
-    const sctx = src.getContext('2d');
-    const img = sctx.createImageData(srcW, srcH);
-    for (let i = 0; i < srcW * srcH; i++) {
-      const v = Math.max(0, Math.min(255, Math.round(alphaData[i] * 255)));
-      img.data[i * 4] = v;
-      img.data[i * 4 + 1] = v;
-      img.data[i * 4 + 2] = v;
-      img.data[i * 4 + 3] = 255;
-    }
-    sctx.putImageData(img, 0, 0);
-    const dst = document.createElement('canvas');
-    dst.width = dstW; dst.height = dstH;
-    const dctx = dst.getContext('2d');
-    dctx.drawImage(src, 0, 0, dstW, dstH);
-    return dst.getContext('2d').getImageData(0, 0, dstW, dstH).data;
-  }
-
-  function tensorToFloatArray(tensor) {
-    if (!tensor) return null;
-    if (tensor.data instanceof Float32Array) return tensor.data;
-    if (tensor.data instanceof Uint8Array) return Float32Array.from(tensor.data);
-    if (Array.isArray(tensor.data)) return Float32Array.from(tensor.data);
-    return new Float32Array(tensor.data);
-  }
-
-  function extractMaskFromOutput(outputTensor) {
-    const data = tensorToFloatArray(outputTensor);
-    const dims = outputTensor.dims || [];
-    let w = 0, h = 0, offset = 0;
-    if (dims.length === 4) {
-      h = dims[2]; w = dims[3];
-      offset = 0;
-    } else if (dims.length === 3) {
-      h = dims[1]; w = dims[2];
-      offset = 0;
-    } else if (dims.length === 2) {
-      h = dims[0]; w = dims[1];
-    } else {
-      return { w: 0, h: 0, data: data };
-    }
-    const area = w * h;
-    let mask = new Float32Array(area);
-    if (data.length === area) {
-      mask.set(data);
-    } else if (data.length >= area) {
-      // assume first channel is the mask
-      mask.set(data.slice(offset, offset + area));
-    }
-    let min = Infinity, max = -Infinity;
-    for (const v of mask) { if (v < min) min = v; if (v > max) max = v; }
-    const range = (max - min) || 1;
-    for (let i = 0; i < mask.length; i++) mask[i] = (mask[i] - min) / range;
-    return { w, h, data: mask };
-  }
-
-  function makeGrayCanvasFromMask(mask, w, h) {
-    const c = document.createElement('canvas');
-    c.width = w; c.height = h;
-    const ctx = c.getContext('2d');
-    const img = ctx.createImageData(w, h);
-    for (let i = 0; i < w * h; i++) {
-      const v = Math.max(0, Math.min(255, Math.round(mask[i] * 255)));
-      img.data[i * 4] = v;
-      img.data[i * 4 + 1] = v;
-      img.data[i * 4 + 2] = v;
-      img.data[i * 4 + 3] = 255;
-    }
-    ctx.putImageData(img, 0, 0);
-    return c;
-  }
-
-  function alphaFromMaskAndImage(mask, imageCanvas, threshold = 0.18) {
-    const w = imageCanvas.width, h = imageCanvas.height;
-    const maskCanvas = makeGrayCanvasFromMask(mask.data, mask.w, mask.h);
-    const c = document.createElement('canvas');
-    c.width = w; c.height = h;
-    const ctx = c.getContext('2d');
-    ctx.drawImage(imageCanvas, 0, 0, w, h);
-    const img = ctx.getImageData(0, 0, w, h);
-    const mctx = maskCanvas.getContext('2d');
-    const m = mctx.getImageData(0, 0, w, h).data;
-    for (let i = 0; i < w * h; i++) {
-      const a = Math.max(0, Math.min(255, Math.round((m[i * 4] / 255) * 255)));
-      img.data[i * 4 + 3] = a;
-    }
-    ctx.putImageData(img, 0, 0);
-    return c;
-  }
-
-  function drawAlphaComposite(srcCanvas, alphaCanvas, bgColor, transparent = false, brightness = 0, contrast = 0, sharpness = 0) {
-    const w = srcCanvas.width, h = srcCanvas.height;
-    const out = document.createElement('canvas');
-    out.width = w; out.height = h;
-    const ctx = out.getContext('2d');
-    if (!transparent) {
-      ctx.fillStyle = bgColor;
-      ctx.fillRect(0, 0, w, h);
-    }
-    ctx.drawImage(alphaCanvas, 0, 0);
-    const img = ctx.getImageData(0, 0, w, h);
-    const d = img.data;
-    const cFactor = (259 * (contrast + 255)) / (255 * (259 - contrast));
-    const s = sharpness;
-    for (let i = 0; i < d.length; i += 4) {
-      let r = d[i], g = d[i+1], b = d[i+2];
-      r = cFactor * (r - 128) + 128 + brightness;
-      g = cFactor * (g - 128) + 128 + brightness;
-      b = cFactor * (b - 128) + 128 + brightness;
-      d[i] = Math.max(0, Math.min(255, r));
-      d[i+1] = Math.max(0, Math.min(255, g));
-      d[i+2] = Math.max(0, Math.min(255, b));
-    }
-    if (s > 0) {
-      // simple sharpen via convolution-like blend with blurred copy
-      const blur = document.createElement('canvas');
-      blur.width = w; blur.height = h;
-      const bctx = blur.getContext('2d');
-      bctx.filter = `blur(${Math.min(8, s)}px)`;
-      bctx.drawImage(out, 0, 0);
-      const bd = bctx.getImageData(0, 0, w, h).data;
-      for (let i = 0; i < d.length; i += 4) {
-        d[i] = Math.max(0, Math.min(255, d[i] + (d[i] - bd[i]) * 0.65));
-        d[i+1] = Math.max(0, Math.min(255, d[i+1] + (d[i+1] - bd[i+1]) * 0.65));
-        d[i+2] = Math.max(0, Math.min(255, d[i+2] + (d[i+2] - bd[i+2]) * 0.65));
-      }
-    }
-    ctx.putImageData(img, 0, 0);
-    return out;
-  }
-
-  function findBoundingBoxAlpha(canvas, threshold = 16) {
-    const ctx = canvas.getContext('2d');
-    const { width: w, height: h } = canvas;
-    const d = ctx.getImageData(0, 0, w, h).data;
-    let minX = w, minY = h, maxX = -1, maxY = -1;
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const a = d[(y * w + x) * 4 + 3];
-        if (a > threshold) {
-          if (x < minX) minX = x;
-          if (y < minY) minY = y;
-          if (x > maxX) maxX = x;
-          if (y > maxY) maxY = y;
+  // Second pass: light 3x3 smoothing on the alpha channel only,
+  // which softens jagged edges without blurring the actual photo.
+  const smoothed = new Float32Array(iw * ih);
+  for (let y = 0; y < ih; y++) {
+    for (let x = 0; x < iw; x++) {
+      let sum = 0, n = 0;
+      for (let dy = -1; dy <= 1; dy++) {
+        const yy = y + dy;
+        if (yy < 0 || yy >= ih) continue;
+        for (let dx = -1; dx <= 1; dx++) {
+          const xx = x + dx;
+          if (xx < 0 || xx >= iw) continue;
+          sum += alphaBuf[yy * iw + xx];
+          n++;
         }
       }
-    }
-    if (maxX < 0) return { x: 0, y: 0, w, h };
-    return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
-  }
-
-  function ratioByPreset(name) {
-    if (name === '2x2') return 1;
-    if (name === '4x6') return 4/6;
-    return 35/45;
-  }
-
-  function passportCrop(canvas, ratioName, strength = 0.72) {
-    const ratio = ratioByPreset(ratioName);
-    const bbox = findBoundingBoxAlpha(canvas, 18);
-    const w = canvas.width, h = canvas.height;
-    const centerX = bbox.x + bbox.w / 2;
-    const centerY = bbox.y + bbox.h / 2;
-
-    const headroom = (1 - strength) * 0.18 + 0.10;
-    const topExtra = Math.round(bbox.h * (0.18 + headroom));
-    const sideExtra = Math.round(bbox.w * (0.18 + (1 - strength) * 0.12));
-    const bottomExtra = Math.round(bbox.h * (0.12 + (1 - strength) * 0.08));
-
-    let cropW = bbox.w + sideExtra * 2;
-    let cropH = bbox.h + topExtra + bottomExtra;
-
-    if (cropW / cropH > ratio) cropH = cropW / ratio;
-    else cropW = cropH * ratio;
-
-    let x = Math.round(centerX - cropW / 2);
-    let y = Math.round(centerY - cropH / 2 - bbox.h * 0.08);
-
-    x = Math.max(0, Math.min(w - cropW, x));
-    y = Math.max(0, Math.min(h - cropH, y));
-    cropW = Math.min(cropW, w);
-    cropH = Math.min(cropH, h);
-
-    const out = document.createElement('canvas');
-    out.width = 600;
-    out.height = Math.round(out.width / ratio);
-    const ctx = out.getContext('2d');
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, out.width, out.height);
-    ctx.drawImage(canvas, x, y, cropW, cropH, 0, 0, out.width, out.height);
-    return out;
-  }
-
-  function makeA4Sheet(photoCanvas, copies = 8) {
-    const sheet = document.createElement('canvas');
-    sheet.width = 2480;
-    sheet.height = 3508;
-    const ctx = sheet.getContext('2d');
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, sheet.width, sheet.height);
-    const margin = 140;
-    const cols = 2;
-    const rows = Math.ceil(copies / cols);
-    const gapX = 100, gapY = 90;
-    const photoW = Math.floor((sheet.width - margin * 2 - gapX) / cols);
-    const photoH = Math.floor(photoW * photoCanvas.height / photoCanvas.width);
-    const startY = margin + 40;
-    let count = 0;
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        if (count >= copies) break;
-        const x = margin + c * (photoW + gapX);
-        const y = startY + r * (photoH + gapY);
-        ctx.fillStyle = '#f4f4f4';
-        ctx.fillRect(x - 6, y - 6, photoW + 12, photoH + 12);
-        ctx.drawImage(photoCanvas, x, y, photoW, photoH);
-        count++;
-      }
-    }
-    return sheet;
-  }
-
-  function downloadCanvas(canvas, filename, mime = 'image/png', quality = 0.95) {
-    canvas.toBlob((blob) => {
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = filename;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 3000);
-    }, mime, quality);
-  }
-
-  async function loadModels() {
-    if (depthSession && mattingSession && refinerSession) return;
-    setStatus('Loading', 'Starting ONNX sessions...', 10);
-    const opts = { executionProviders: ['wasm'] };
-    depthSession = await ort.InferenceSession.create(DEPTH_MODEL, opts);
-    setStatus('Loading', 'Depth model loaded', 35);
-    await sleep(10);
-    mattingSession = await ort.InferenceSession.create(MATTING_MODEL, opts);
-    setStatus('Loading', 'Matting model loaded', 65);
-    await sleep(10);
-    refinerSession = await ort.InferenceSession.create(REFINER_MODEL, opts);
-    setStatus('Ready', 'All 3 models loaded', 100);
-  }
-
-  async function runDepth(bitmap) {
-    const target = canvasFromBitmap(bitmap, 518, 518, true);
-    const tensor = normalizeToCHW(target, [0.485, 0.456, 0.406], [0.229, 0.224, 0.225]);
-    const inputName = depthSession.inputNames?.[0] || Object.keys(depthSession.inputMetadata)[0];
-    const outputName = depthSession.outputNames?.[0] || Object.keys(depthSession.outputMetadata)[0];
-    const res = await depthSession.run({ [inputName]: tensor });
-    const out = res[outputName] || res[Object.keys(res)[0]];
-    const dims = out.dims || [];
-    let data = tensorToFloatArray(out);
-    let w = 518, h = 518;
-    if (dims.length === 4) { h = dims[2]; w = dims[3]; data = data.slice(0, w*h); }
-    else if (dims.length === 3) { h = dims[1]; w = dims[2]; data = data.slice(0, w*h); }
-    else if (dims.length === 2) { h = dims[0]; w = dims[1]; }
-    else if (dims.length === 1) { data = data.slice(0, 518*518); }
-    let min = Infinity, max = -Infinity;
-    for (const v of data) { if (v < min) min = v; if (v > max) max = v; }
-    const range = (max - min) || 1;
-    const norm = new Float32Array(w*h);
-    for (let i = 0; i < norm.length; i++) norm[i] = (data[i] - min) / range;
-    return { w, h, data: norm };
-  }
-
-  async function runMatting(bitmap, depthMask) {
-    const target = canvasFromBitmap(bitmap, 256, 256, true);
-    const rgb = rawRGBToCHW(target);
-    const depthCanvas = makeGrayCanvasFromMask(depthMask.data, depthMask.w, depthMask.h);
-    const depthResized = document.createElement('canvas');
-    depthResized.width = 256; depthResized.height = 256;
-    depthResized.getContext('2d').drawImage(depthCanvas, 0, 0, 256, 256);
-    const depthData = depthResized.getContext('2d').getImageData(0,0,256,256).data;
-    const area = 256 * 256;
-    const input = new Float32Array(1 * 4 * area);
-    input.set(rgb, 0);
-    for (let i = 0; i < area; i++) input[3 * area + i] = depthData[i*4] / 255;
-    const inputName = mattingSession.inputNames?.[0] || Object.keys(mattingSession.inputMetadata)[0];
-    const outputName = mattingSession.outputNames?.[0] || Object.keys(mattingSession.outputMetadata)[0];
-    const res = await mattingSession.run({ [inputName]: new ort.Tensor('float32', input, [1,4,256,256]) });
-    const out = res[outputName] || res[Object.keys(res)[0]];
-    return extractMaskFromOutput(out);
-  }
-
-  async function runRefiner(bitmap, depthMask, alpha1) {
-    const srcW = Math.min(bitmap.width, 1280);
-    const srcH = Math.min(bitmap.height, 1280);
-    const ratio = Math.min(1280 / bitmap.width, 1280 / bitmap.height, 1);
-    const w = Math.max(1, Math.round(bitmap.width * ratio));
-    const h = Math.max(1, Math.round(bitmap.height * ratio));
-    const rgbCanvas = canvasFromBitmap(bitmap, w, h, true);
-
-    const depthCanvas = makeGrayCanvasFromMask(depthMask.data, depthMask.w, depthMask.h);
-    const depthResized = document.createElement('canvas');
-    depthResized.width = w; depthResized.height = h;
-    depthResized.getContext('2d').drawImage(depthCanvas, 0, 0, w, h);
-    const depthData = depthResized.getContext('2d').getImageData(0, 0, w, h).data;
-
-    const alphaCanvas = makeGrayCanvasFromMask(alpha1.data, alpha1.w, alpha1.h);
-    const alphaResized = document.createElement('canvas');
-    alphaResized.width = w; alphaResized.height = h;
-    alphaResized.getContext('2d').drawImage(alphaCanvas, 0, 0, w, h);
-    const alphaData = alphaResized.getContext('2d').getImageData(0,0,w,h).data;
-
-    const rgb = rawRGBToCHW(rgbCanvas);
-    const area = w * h;
-    const input = new Float32Array(1 * 5 * area);
-    input.set(rgb, 0);
-    for (let i = 0; i < area; i++) {
-      input[3 * area + i] = depthData[i*4] / 255;
-      input[4 * area + i] = alphaData[i*4] / 255;
-    }
-
-    const inputName = refinerSession.inputNames?.[0] || Object.keys(refinerSession.inputMetadata)[0];
-    const outputName = refinerSession.outputNames?.[0] || Object.keys(refinerSession.outputMetadata)[0];
-    const res = await refinerSession.run({ [inputName]: new ort.Tensor('float32', input, [1,5,h,w]) });
-    const out = res[outputName] || res[Object.keys(res)[0]];
-    return { mask: extractMaskFromOutput(out), w, h };
-  }
-
-  async function fallbackMask(bitmap) {
-    // Simple heuristic fallback that still works if a model input shape differs.
-    const c = canvasFromBitmap(bitmap, 512, 512, true);
-    const ctx = c.getContext('2d');
-    const d = ctx.getImageData(0, 0, 512, 512);
-    const arr = d.data;
-    const mask = new Float32Array(512 * 512);
-    const cx = 256, cy = 264;
-    for (let y = 0; y < 512; y++) {
-      for (let x = 0; x < 512; x++) {
-        const i = (y * 512 + x) * 4;
-        const r = arr[i], g = arr[i+1], b = arr[i+2];
-        const lum = (0.299*r + 0.587*g + 0.114*b) / 255;
-        const dist = Math.hypot((x - cx) / 512, (y - cy) / 512);
-        mask[y * 512 + x] = Math.max(0, Math.min(1, 1 - dist * 1.7 + (0.55 - lum) * 0.18));
-      }
-    }
-    return { w: 512, h: 512, data: mask };
-  }
-
-  async function processImage() {
-    if (working) return;
-    if (!sourceBitmap) return alert('Please upload an image first.');
-    working = true;
-    ui.processBtn.disabled = true;
-    ui.processBtn.textContent = 'Processing...';
-
-    const brightness = Number(ui.brightness.value);
-    const contrast = Number(ui.contrast.value);
-    const sharpness = Number(ui.sharpness.value);
-    const bgColor = ui.bgColor.value;
-    const bgMode = ui.bgMode.value;
-    const ratio = ui.ratioSelect.value;
-    const cropStrength = Number(ui.cropStrength.value) / 100;
-
-    try {
-      if (!depthSession || !mattingSession || !refinerSession) {
-        await loadModels();
-      }
-      setStatus('Running', 'Depth estimation...', 20);
-      let depthMask, alpha1, alpha2;
-      try {
-        depthMask = await runDepth(sourceBitmap);
-        setStatus('Running', 'Matting...', 45);
-        alpha1 = await runMatting(sourceBitmap, depthMask);
-        setStatus('Running', 'Refining...', 70);
-        alpha2 = await runRefiner(sourceBitmap, depthMask, alpha1);
-      } catch (err) {
-        console.warn('Model pipeline failed, using fallback:', err);
-        depthMask = await fallbackMask(sourceBitmap);
-        alpha1 = depthMask;
-        alpha2 = depthMask;
-      }
-
-      // Build a transparent cutout using the best available alpha.
-      const sourceCover = canvasFromBitmap(sourceBitmap, Math.min(sourceBitmap.width, 1600), Math.min(sourceBitmap.height, 1600), true);
-      const alphaCanvas = alphaFromMaskAndImage(alpha2, sourceCover);
-      const transparent = document.createElement('canvas');
-      transparent.width = sourceCover.width;
-      transparent.height = sourceCover.height;
-      const tctx = transparent.getContext('2d');
-      tctx.drawImage(sourceCover, 0, 0);
-      const img = tctx.getImageData(0, 0, transparent.width, transparent.height);
-      const aData = alphaCanvas.getContext('2d').getImageData(0, 0, transparent.width, transparent.height).data;
-      for (let i = 0; i < img.data.length; i += 4) {
-        img.data[i+3] = aData[i+3];
-      }
-      tctx.putImageData(img, 0, 0);
-
-      // Auto-crop to passport ratio using the transparent cutout.
-      const passportCut = passportCrop(transparent, ratio, cropStrength);
-
-      // Replace background after cropping.
-      const finalComposite = drawAlphaComposite(
-        passportCut,
-        passportCut,
-        bgColor,
-        bgMode === 'transparent',
-        brightness,
-        contrast,
-        sharpness
-      );
-      processed = finalComposite;
-
-      ui.resultCanvas.width = finalComposite.width;
-      ui.resultCanvas.height = finalComposite.height;
-      ui.resultCanvas.getContext('2d').drawImage(finalComposite, 0, 0);
-      ui.resultInfo.innerHTML = `Processed size: <b>${finalComposite.width} × ${finalComposite.height}</b> px<br>Ratio preset: <b>${ratio}</b><br>Background: <b>${bgMode}</b>`;
-      setStatus('Done', 'Photo ready', 100);
-    } catch (err) {
-      console.error(err);
-      alert('Could not process the photo. Check console for details.');
-      setStatus('Error', String(err.message || err), 0);
-    } finally {
-      working = false;
-      ui.processBtn.disabled = false;
-      ui.processBtn.textContent = 'Process photo';
+      smoothed[y * iw + x] = sum / n;
     }
   }
 
-  async function initUpload(file) {
-    if (!file) return;
-    sourceBitmap = await fileToBitmap(file);
-    drawBitmapToCanvas(sourceBitmap, ui.inputCanvas);
-    ui.resultInfo.textContent = 'Ready to process.';
-    setStatus('Loaded', 'Image loaded', 5);
+  for (let i = 0; i < iw * ih; i++) {
+    const a = Math.max(0, Math.min(1, smoothed[i]));
+    px[i * 4 + 3] = Math.round(a * 255);
   }
 
-  function resetAll() {
-    sourceBitmap = null;
-    processed = null;
-    ui.fileInput.value = '';
-    drawPlaceholder(ui.inputCanvas, 'Input preview');
-    drawPlaceholder(ui.resultCanvas, 'Result preview');
-    ui.resultInfo.textContent = 'No image processed yet.';
-    ui.progressBar.style.width = '0%';
-    setStatus('Idle', 'Waiting for upload', 0);
+  rCtx.putImageData(imgData, 0, 0);
+  confMasks.forEach(m => m.close && m.close());
+  result.close && result.close();
+
+  return resultCanvas;
+}
+
+// ── Convert OffscreenCanvas to regular canvas ──────────────────────
+async function offscreenToCanvas(off) {
+  const c = document.createElement('canvas');
+  c.width  = off.width;
+  c.height = off.height;
+  const blob = await off.convertToBlob({ type: 'image/png' });
+  return new Promise(res => {
+    const img = new Image();
+    img.onload = () => {
+      c.getContext('2d').drawImage(img, 0, 0);
+      URL.revokeObjectURL(img.src);
+      res(c);
+    };
+    img.src = URL.createObjectURL(blob);
+  });
+}
+
+// ── EDITOR ────────────────────────────────────────────────────────
+const CROP_RATIO = 35 / 45; // default passport ratio
+let cropRatio = CROP_RATIO;
+let cropBoxPx = { x: 0, y: 0, w: 0, h: 0 };
+
+function initEditor() {
+  const wrap = canvasWrap;
+  const size = wrap.clientWidth;
+  editorCanvas.width  = size;
+  editorCanvas.height = size;
+
+  // Reset pan/scale
+  state.panX = 0; state.panY = 0;
+  state.scale = 1.0;
+  zoomSlider.value = 100;
+  zoomVal.textContent = '100%';
+
+  updateCropBox();
+  renderEditor();
+}
+
+function updateCropBox() {
+  const cw = editorCanvas.width;
+  const ch = editorCanvas.height;
+  const padding = 24;
+  const maxW = cw - padding * 2;
+  const maxH = ch - padding * 2;
+  let bw, bh;
+  if (maxW / cropRatio <= maxH) {
+    bw = maxW; bh = bw / cropRatio;
+  } else {
+    bh = maxH; bw = bh * cropRatio;
+  }
+  const bx = (cw - bw) / 2;
+  const by = (ch - bh) / 2;
+  cropBoxPx = { x: bx, y: by, w: bw, h: bh };
+
+  // Position CSS crop box overlay
+  const ww = canvasWrap.clientWidth;
+  const wh = canvasWrap.clientHeight;
+  const canvasRect = editorCanvas.getBoundingClientRect();
+  const wrapRect   = canvasWrap.getBoundingClientRect();
+
+  const scaleX = canvasRect.width  / cw;
+  const scaleY = canvasRect.height / ch;
+
+  cropBox.style.left   = (bx * scaleX + (canvasRect.left - wrapRect.left)) + 'px';
+  cropBox.style.top    = (by * scaleY + (canvasRect.top  - wrapRect.top))  + 'px';
+  cropBox.style.width  = (bw * scaleX) + 'px';
+  cropBox.style.height = (bh * scaleY) + 'px';
+}
+
+function renderEditor() {
+  if (!state.mattedCanvas) return;
+  const ctx = editorCtx;
+  const cw = editorCanvas.width;
+  const ch = editorCanvas.height;
+
+  ctx.clearRect(0, 0, cw, ch);
+
+  // Draw background
+  ctx.fillStyle = '#3A3A3A';
+  ctx.fillRect(0, 0, cw, ch);
+
+  // Draw image centered in crop box with pan+zoom
+  const img = state.mattedCanvas;
+  const { x: bx, y: by, w: bw, h: bh } = cropBoxPx;
+
+  // Fit image into crop box by default
+  const imgRatio = img.width / img.height;
+  let dw = bw * state.scale;
+  let dh = dw / imgRatio;
+  if (dh < bh * state.scale) { dh = bh * state.scale; dw = dh * imgRatio; }
+
+  const cx = bx + bw/2 + state.panX;
+  const cy = by + bh/2 + state.panY;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(bx, by, bw, bh);
+  ctx.clip();
+
+  // Background fill behind transparent image
+  ctx.fillStyle = state.bgColor;
+  ctx.fillRect(bx, by, bw, bh);
+
+  ctx.drawImage(img, cx - dw/2, cy - dh/2, dw, dh);
+  ctx.restore();
+}
+
+// ── Drag to pan ────────────────────────────────────────────────────
+function getPointer(e) {
+  if (e.touches && e.touches.length > 0) {
+    const r = editorCanvas.getBoundingClientRect();
+    return {
+      x: (e.touches[0].clientX - r.left) * (editorCanvas.width / r.width),
+      y: (e.touches[0].clientY - r.top)  * (editorCanvas.height / r.height),
+    };
+  }
+  const r = editorCanvas.getBoundingClientRect();
+  return {
+    x: (e.clientX - r.left) * (editorCanvas.width / r.width),
+    y: (e.clientY - r.top)  * (editorCanvas.height / r.height),
+  };
+}
+
+editorCanvas.addEventListener('mousedown', e => {
+  state.isDragging = true;
+  const p = getPointer(e);
+  state.dragStartX = p.x; state.dragStartY = p.y;
+  state.lastPanX = state.panX; state.lastPanY = state.panY;
+  e.preventDefault();
+});
+editorCanvas.addEventListener('touchstart', e => {
+  if (e.touches.length !== 1) return;
+  state.isDragging = true;
+  const p = getPointer(e);
+  state.dragStartX = p.x; state.dragStartY = p.y;
+  state.lastPanX = state.panX; state.lastPanY = state.panY;
+  e.preventDefault();
+}, { passive: false });
+
+window.addEventListener('mousemove', e => {
+  if (!state.isDragging) return;
+  const p = getPointer(e);
+  state.panX = state.lastPanX + (p.x - state.dragStartX);
+  state.panY = state.lastPanY + (p.y - state.dragStartY);
+  renderEditor();
+});
+window.addEventListener('touchmove', e => {
+  if (!state.isDragging || e.touches.length !== 1) return;
+  const p = getPointer(e);
+  state.panX = state.lastPanX + (p.x - state.dragStartX);
+  state.panY = state.lastPanY + (p.y - state.dragStartY);
+  renderEditor();
+  e.preventDefault();
+}, { passive: false });
+
+window.addEventListener('mouseup',  () => state.isDragging = false);
+window.addEventListener('touchend', () => state.isDragging = false);
+
+// Scroll to zoom
+editorCanvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? -5 : 5;
+  const nv = Math.max(50, Math.min(300, parseInt(zoomSlider.value) + delta));
+  zoomSlider.value = nv;
+  state.scale = nv / 100;
+  zoomVal.textContent = nv + '%';
+  renderEditor();
+}, { passive: false });
+
+// ── Zoom slider ────────────────────────────────────────────────────
+zoomSlider.addEventListener('input', () => {
+  const v = parseInt(zoomSlider.value);
+  state.scale = v / 100;
+  zoomVal.textContent = v + '%';
+  renderEditor();
+});
+$('zoomIn').addEventListener('click',  () => { zoomSlider.value = Math.min(300, +zoomSlider.value + 10); zoomSlider.dispatchEvent(new Event('input')); });
+$('zoomOut').addEventListener('click', () => { zoomSlider.value = Math.max(50,  +zoomSlider.value - 10); zoomSlider.dispatchEvent(new Event('input')); });
+
+// ── Color swatches ─────────────────────────────────────────────────
+document.querySelectorAll('.swatch[data-color]').forEach(sw => {
+  sw.addEventListener('click', () => {
+    document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+    sw.classList.add('active');
+    state.bgColor = sw.dataset.color;
+    colorPicker.value = state.bgColor;
+    renderEditor();
+  });
+});
+
+colorPicker.addEventListener('input', () => {
+  document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+  document.querySelector('.swatch-custom').classList.add('active');
+  state.bgColor = colorPicker.value;
+  renderEditor();
+});
+
+// ── Passport size buttons ──────────────────────────────────────────
+document.querySelectorAll('.size-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    const isCustom = btn.id === 'customSizeBtn';
+    $('customSizeRow').style.display = isCustom ? 'grid' : 'none';
+
+    if (!isCustom) {
+      state.passportW = parseFloat(btn.dataset.w);
+      state.passportH = parseFloat(btn.dataset.h);
+      cropRatio = state.passportW / state.passportH;
+      updateCropBox();
+      renderEditor();
+    }
+  });
+});
+
+$('customW').addEventListener('input', () => {
+  const w = parseFloat($('customW').value) || 35;
+  const h = parseFloat($('customH').value) || 45;
+  state.passportW = w; state.passportH = h;
+  cropRatio = w / h;
+  updateCropBox();
+  renderEditor();
+});
+$('customH').addEventListener('input', () => $('customW').dispatchEvent(new Event('input')));
+
+// ── Center / Reset ─────────────────────────────────────────────────
+$('btnCenter').addEventListener('click', () => {
+  state.panX = 0; state.panY = 0;
+  renderEditor();
+});
+$('btnReset').addEventListener('click', () => {
+  state.panX = 0; state.panY = 0;
+  state.scale = 1;
+  zoomSlider.value = 100;
+  zoomVal.textContent = '100%';
+  renderEditor();
+});
+$('btnReupload').addEventListener('click', () => {
+  fileInput.value = '';
+  showSection('secUpload');
+  updatePills(1);
+});
+
+// ── Apply → Export ─────────────────────────────────────────────────
+$('btnApply').addEventListener('click', () => {
+  generateExport();
+  showSection('secExport');
+  updatePills(4);
+});
+
+// ── Generate final passport photo canvas ──────────────────────────
+function getPassportCanvas() {
+  // px at 300 DPI
+  const pw = Math.round(state.passportW / 25.4 * state.DPI);
+  const ph = Math.round(state.passportH / 25.4 * state.DPI);
+
+  const c = document.createElement('canvas');
+  c.width = pw; c.height = ph;
+  const ctx = c.getContext('2d');
+
+  const img = state.mattedCanvas;
+  const imgRatio = img.width / img.height;
+  let dw, dh;
+  if (imgRatio > pw/ph) { dh = ph * state.scale; dw = dh * imgRatio; }
+  else                   { dw = pw * state.scale; dh = dw / imgRatio; }
+
+  // Use editor pan as fraction of crop box
+  const { w: bw, h: bh } = cropBoxPx;
+  const panFracX = state.panX / (bw || 1);
+  const panFracY = state.panY / (bh || 1);
+
+  const cx = pw/2 + panFracX * pw;
+  const cy = ph/2 + panFracY * ph;
+
+  // Background
+  ctx.fillStyle = state.bgColor;
+  ctx.fillRect(0, 0, pw, ph);
+
+  ctx.drawImage(img, cx - dw/2, cy - dh/2, dw, dh);
+
+  return c;
+}
+
+function getAlphaCanvas() {
+  const pw = Math.round(state.passportW / 25.4 * state.DPI);
+  const ph = Math.round(state.passportH / 25.4 * state.DPI);
+  const c = document.createElement('canvas');
+  c.width = pw; c.height = ph;
+  const ctx = c.getContext('2d');
+
+  const img = state.mattedCanvas;
+  const imgRatio = img.width / img.height;
+  let dw, dh;
+  if (imgRatio > pw/ph) { dh = ph * state.scale; dw = dh * imgRatio; }
+  else                   { dw = pw * state.scale; dh = dw / imgRatio; }
+
+  const { w: bw, h: bh } = cropBoxPx;
+  const panFracX = state.panX / (bw || 1);
+  const panFracY = state.panY / (bh || 1);
+  const cx = pw/2 + panFracX * pw;
+  const cy = ph/2 + panFracY * ph;
+
+  ctx.drawImage(img, cx - dw/2, cy - dh/2, dw, dh);
+  return c;
+}
+
+function generateExport() {
+  const passport = getPassportCanvas();
+  const alpha    = getAlphaCanvas();
+
+  // PNG preview
+  const prevPng = $('previewPng');
+  prevPng.width = passport.width; prevPng.height = passport.height;
+  prevPng.getContext('2d').drawImage(passport, 0, 0);
+
+  // JPG preview
+  const prevJpg = $('previewJpg');
+  prevJpg.width = passport.width; prevJpg.height = passport.height;
+  const jpgCtx = prevJpg.getContext('2d');
+  jpgCtx.fillStyle = '#FFF';
+  jpgCtx.fillRect(0, 0, passport.width, passport.height);
+  jpgCtx.drawImage(passport, 0, 0);
+
+  // Alpha preview
+  const prevA = $('previewAlpha');
+  prevA.width = alpha.width; prevA.height = alpha.height;
+  prevA.getContext('2d').drawImage(alpha, 0, 0);
+
+  // A4 sheet
+  generateSheet(passport);
+}
+
+// ── A4 Sheet generator ────────────────────────────────────────────
+function generateSheet(passportCanvas) {
+  // A4 at 300 DPI
+  const A4W = Math.round(210 / 25.4 * state.DPI);  // 2480px
+  const A4H = Math.round(297 / 25.4 * state.DPI);  // 3508px
+
+  sheetCanvas.width  = A4W;
+  sheetCanvas.height = A4H;
+  const ctx = sheetCtx;
+
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(0, 0, A4W, A4H);
+
+  const count = state.sheetCount;
+  const margin   = Math.round(10 / 25.4 * state.DPI); // 10mm margin
+  const gap      = Math.round(5  / 25.4 * state.DPI); // 5mm gap
+
+  const pw = passportCanvas.width;
+  const ph = passportCanvas.height;
+
+  // Auto-layout: find cols/rows
+  const cols = count <= 4 ? 2 : count <= 6 ? 3 : 4;
+  const rows = Math.ceil(count / cols);
+
+  const totalW = cols * pw + (cols - 1) * gap;
+  const totalH = rows * ph + (rows - 1) * gap;
+  const startX = Math.round((A4W - totalW) / 2);
+  const startY = Math.round((A4H - totalH) / 2);
+
+  // Draw cut lines (light gray)
+  ctx.strokeStyle = 'rgba(180,180,180,0.6)';
+  ctx.setLineDash([8, 8]);
+  ctx.lineWidth = 2;
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const idx = r * cols + c;
+      if (idx >= count) break;
+      const x = startX + c * (pw + gap);
+      const y = startY + r * (ph + gap);
+      ctx.strokeRect(x, y, pw, ph);
+      ctx.drawImage(passportCanvas, x, y, pw, ph);
+    }
   }
 
-  function downloadSheetImage() {
-    if (!processed) return alert('Process an image first.');
-    const sheet = makeA4Sheet(processed, 8);
-    downloadCanvas(sheet, 'passport-sheet.png');
-  }
+  ctx.setLineDash([]);
+}
 
-  function downloadPdf() {
-    if (!processed) return alert('Process an image first.');
-    const sheet = makeA4Sheet(processed, 8);
-    const data = sheet.toDataURL('image/png', 1.0);
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-    const pageW = pdf.internal.pageSize.getWidth();
-    const pageH = pdf.internal.pageSize.getHeight();
-    pdf.addImage(data, 'PNG', 0, 0, pageW, pageH);
-    pdf.save('passport-sheet.pdf');
-  }
+// ── Sheet count buttons ────────────────────────────────────────────
+document.querySelectorAll('[data-count]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-count]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.sheetCount = parseInt(btn.dataset.count);
+    if (state.mattedCanvas) {
+      const passport = getPassportCanvas();
+      generateSheet(passport);
+    }
+  });
+});
 
-  ui.fileInput.addEventListener('change', async (e) => {
-    const file = e.target.files?.[0];
-    if (file) await initUpload(file);
+// ── Download helpers ───────────────────────────────────────────────
+function downloadCanvas(canvas, filename, type='image/png', quality=0.95) {
+  canvas.toBlob(blob => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  }, type, quality);
+}
+
+$('dlPng').addEventListener('click', () => {
+  downloadCanvas(getPassportCanvas(), 'passport-photo.png');
+  toast('PNG downloaded ✓', 'success');
+});
+
+$('dlJpg').addEventListener('click', () => {
+  const c = document.createElement('canvas');
+  const p = getPassportCanvas();
+  c.width = p.width; c.height = p.height;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#FFF';
+  ctx.fillRect(0, 0, c.width, c.height);
+  ctx.drawImage(p, 0, 0);
+  downloadCanvas(c, 'passport-photo.jpg', 'image/jpeg', 0.95);
+  toast('JPG downloaded ✓', 'success');
+});
+
+$('dlAlpha').addEventListener('click', () => {
+  downloadCanvas(getAlphaCanvas(), 'passport-photo-transparent.png');
+  toast('Transparent PNG downloaded ✓', 'success');
+});
+
+$('dlSheetPng').addEventListener('click', () => {
+  downloadCanvas(sheetCanvas, 'passport-sheet-a4.png');
+  toast('A4 Sheet PNG downloaded ✓', 'success');
+});
+
+$('dlSheet').addEventListener('click', async () => {
+  toast('Generating PDF…');
+  try {
+    await generatePDF();
+    toast('PDF downloaded ✓', 'success');
+  } catch(err) {
+    console.error(err);
+    // Fallback: download as PNG
+    downloadCanvas(sheetCanvas, 'passport-sheet-a4.png');
+    toast('Saved as PNG (PDF library unavailable)', '', 4000);
+  }
+});
+
+async function generatePDF() {
+  // Use PDF from canvas via data URL embedded in minimal PDF
+  const blob = await new Promise(res => sheetCanvas.toBlob(res, 'image/jpeg', 0.92));
+  const imgDataUrl = await new Promise(res => {
+    const r = new FileReader();
+    r.onload = e => res(e.target.result);
+    r.readAsDataURL(blob);
   });
 
-  ui.processBtn.addEventListener('click', processImage);
-  ui.loadBtn.addEventListener('click', async () => {
-    try { await loadModels(); }
-    catch (e) { console.error(e); alert('Model loading failed. Check the model URLs and CORS access.'); }
-  });
-  ui.resetBtn.addEventListener('click', resetAll);
-  ui.downloadPng.addEventListener('click', () => processed ? downloadCanvas(processed, 'passport-photo.png') : alert('Process an image first.'));
-  ui.downloadJpg.addEventListener('click', () => processed ? downloadCanvas(processed, 'passport-photo.jpg', 'image/jpeg', 0.95) : alert('Process an image first.'));
-  ui.downloadSheet.addEventListener('click', downloadSheetImage);
-  ui.downloadPdf.addEventListener('click', downloadPdf);
+  // Build a minimal valid PDF with embedded JPEG
+  // A4 = 595.28 x 841.89 points
+  const pdfW = 595.28, pdfH = 841.89;
+  const imgW = sheetCanvas.width, imgH = sheetCanvas.height;
+  const base64 = imgDataUrl.split(',')[1];
 
-  // Drag and drop support.
-  ['dragenter', 'dragover'].forEach(evt => {
-    ui.dropBox.addEventListener(evt, (e) => {
-      e.preventDefault(); e.stopPropagation();
-      ui.dropBox.classList.add('drag');
+  const pdfContent = buildMinimalPDF(base64, pdfW, pdfH, imgW, imgH);
+  const pdfBlob = new Blob([pdfContent], { type: 'application/pdf' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(pdfBlob);
+  a.download = 'passport-sheet-a4.pdf';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+
+function buildMinimalPDF(base64Jpeg, pdfW, pdfH, imgW, imgH) {
+  // Decode base64 to binary string
+  const binaryStr = atob(base64Jpeg);
+  const imgBytes  = new Uint8Array(binaryStr.length);
+  for (let i = 0; i < binaryStr.length; i++) imgBytes[i] = binaryStr.charCodeAt(i);
+
+  const enc = new TextEncoder();
+
+  // Build PDF object by object
+  const objects = [];
+
+  // Object 1: Catalog
+  objects.push(`1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj`);
+
+  // Object 2: Pages
+  objects.push(`2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj`);
+
+  // Object 3: Page
+  objects.push(`3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pdfW.toFixed(2)} ${pdfH.toFixed(2)}] /Contents 4 0 R /Resources << /XObject << /Im1 5 0 R >> >> >>\nendobj`);
+
+  // Object 4: Page content stream (draw image full page)
+  const stream = `q\n${pdfW.toFixed(2)} 0 0 ${pdfH.toFixed(2)} 0 0 cm\n/Im1 Do\nQ\n`;
+  objects.push(`4 0 obj\n<< /Length ${stream.length} >>\nstream\n${stream}\nendstream\nendobj`);
+
+  // Object 5: Image XObject
+  const imgObjHeader = `5 0 obj\n<< /Type /XObject /Subtype /Image /Width ${imgW} /Height ${imgH} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${imgBytes.length} >>\nstream\n`;
+  const imgObjFooter = `\nendstream\nendobj`;
+
+  // Assemble: first pass as strings to compute byte offsets
+  const parts = [];
+  const header = `%PDF-1.4\n%\xE2\xE3\xCF\xD3\n`;
+
+  parts.push(enc.encode(header));
+  const offsets = [];
+
+  for (let i = 0; i < objects.length; i++) {
+    if (i === 4) {
+      // Image object: mixed text + binary
+      const hdr = enc.encode(imgObjHeader);
+      const ftr = enc.encode(imgObjFooter);
+      offsets.push(parts.reduce((a,b)=>a+b.length,0));
+      const combined = new Uint8Array(hdr.length + imgBytes.length + ftr.length);
+      combined.set(hdr, 0);
+      combined.set(imgBytes, hdr.length);
+      combined.set(ftr, hdr.length + imgBytes.length);
+      parts.push(combined);
+    } else {
+      offsets.push(parts.reduce((a,b)=>a+b.length,0));
+      parts.push(enc.encode(objects[i] + '\n'));
+    }
+  }
+
+  // Cross-reference table
+  const xrefOffset = parts.reduce((a,b)=>a+b.length,0);
+  let xref = `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  for (const off of offsets) {
+    xref += off.toString().padStart(10,'0') + ' 00000 n \n';
+  }
+  xref += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+
+  parts.push(enc.encode(xref));
+
+  // Concatenate all parts
+  const totalLen = parts.reduce((a,b)=>a+b.length,0);
+  const result = new Uint8Array(totalLen);
+  let pos = 0;
+  for (const p of parts) { result.set(p, pos); pos += p.length; }
+  return result;
+}
+
+$('btnStartOver').addEventListener('click', () => {
+  state.originalImage = null;
+  state.mattedCanvas  = null;
+  fileInput.value = '';
+  showSection('secUpload');
+  updatePills(1);
+});
+
+// ── Upload handling ────────────────────────────────────────────────
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) handleFile(file);
+});
+
+fileInput.addEventListener('change', () => {
+  if (fileInput.files[0]) handleFile(fileInput.files[0]);
+});
+
+async function handleFile(file) {
+  if (file.size > 20 * 1024 * 1024) {
+    const e = $('uploadError');
+    e.textContent = 'File too large. Please use an image under 20 MB.';
+    e.classList.add('visible');
+    return;
+  }
+  $('uploadError').classList.remove('visible');
+
+  const url = URL.createObjectURL(file);
+  const img  = new Image();
+  img.onload = async () => {
+    URL.revokeObjectURL(url);
+    state.originalImage = img;
+    await processImage(img);
+  };
+  img.onerror = () => {
+    const e = $('uploadError');
+    e.textContent = 'Could not read image. Please try another file.';
+    e.classList.add('visible');
+  };
+  img.src = url;
+}
+
+async function processImage(img) {
+  showSection('secProcess');
+  updatePills(2);
+  $('processError').classList.remove('visible');
+  const retryBtn = $('btnRetryProcess');
+  if (retryBtn) retryBtn.style.display = 'none';
+
+  try {
+    setProgress(0, 'Starting AI pipeline…', 1);
+
+    // Load models (cached after first load)
+    await loadModels();
+    setProgress(90, 'Running background removal…', 4);
+
+    const offscreen = await runBgRemoval(img);
+    setProgress(98, 'Finalizing…', 5);
+
+    state.mattedCanvas = await offscreenToCanvas(offscreen);
+
+    setProgress(100, 'Done!', 5);
+    await new Promise(r => setTimeout(r, 400));
+
+    showSection('secEditor');
+    updatePills(3);
+
+    // Init editor after DOM is visible
+    requestAnimationFrame(() => {
+      initEditor();
+      window.addEventListener('resize', debounce(() => {
+        if ($('secEditor').classList.contains('visible')) {
+          const size = canvasWrap.clientWidth;
+          editorCanvas.width  = size;
+          editorCanvas.height = size;
+          updateCropBox();
+          renderEditor();
+        }
+      }, 200));
     });
-  });
-  ['dragleave', 'drop'].forEach(evt => {
-    ui.dropBox.addEventListener(evt, (e) => {
-      e.preventDefault(); e.stopPropagation();
-      ui.dropBox.classList.remove('drag');
-    });
-  });
-  ui.dropBox.addEventListener('drop', async (e) => {
-    const file = e.dataTransfer.files?.[0];
-    if (file) {
-      ui.fileInput.files = e.dataTransfer.files;
-      await initUpload(file);
-    }
-  });
 
-  // Slight live refresh for edits.
-  ['change', 'input'].forEach(evt => {
-    [ui.bgColor, ui.bgMode, ui.cropStrength, ui.brightness, ui.contrast, ui.sharpness, ui.ratioSelect].forEach(el => {
-      el.addEventListener(evt, () => { if (processed) processImage(); });
-    });
-  });
+  } catch(err) {
+    console.error('Processing error:', err);
+    showProcessError('AI processing failed: ' + err.message + '. Try a smaller image or different browser.');
+  }
+}
 
-  resetAll();
+function debounce(fn, ms) {
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+
+// ── Init ───────────────────────────────────────────────────────────
+(function init() {
+  showSection('secUpload');
+  updatePills(1);
+
+  const retryBtn = $('btnRetryProcess');
+  if (retryBtn) {
+    retryBtn.addEventListener('click', () => {
+      if (state.originalImage) processImage(state.originalImage);
+    });
+  }
+})();
 </script>
 </body>
 </html>
